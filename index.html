@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TRPH</title>
+<meta name="theme-color" content="#2456C7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="TRPH">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<style>
+:root{
+  --font:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --bg:#F3F4F6;--surface:#FFFFFF;--ink:#2B2A2B;--muted:#68666A;--line:#DEDFE3;--chip:#ECEDF0;
+  --shows:#2456C7;--shows-soft:#E4ECFA;--horses:#9C6B12;--horses-soft:#F7EEDC;--people:#1F6E8A;--people-soft:#E1EFF4;
+  --good:#2F7A4E;--warn:#9A5F0E;--bad:#B03E35;--sec:var(--shows);--soft:var(--shows-soft);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#141516;--surface:#1E1F21;--ink:#ECECEE;--muted:#A3A2A6;--line:#2F3134;--chip:#28292C;
+  --shows:#8AAEF0;--shows-soft:#1A2540;--horses:#E8BE6A;--horses-soft:#33280F;--people:#7FC1D6;--people-soft:#17303A;
+  --good:#7CC79A;--warn:#E0A84A;--bad:#E7776D;color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+body{padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+body.sec-horses{--sec:var(--horses);--soft:var(--horses-soft)}
+body.sec-people{--sec:var(--people);--soft:var(--people-soft)}
+body.sec-members{--sec:var(--muted);--soft:var(--chip)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--sec)}
+:focus-visible{outline:3px solid var(--sec);outline-offset:2px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:12px;padding:14px 18px 10px;border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+.brand{font-weight:800;font-stretch:125%;font-size:26px;letter-spacing:.02em;color:var(--sec);line-height:1}
+.top .sp{flex:1}
+.who{font-size:13px;color:var(--muted);text-align:right;max-width:50vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{max-width:760px;margin:0 auto;padding:16px 16px 40px}
+h1{font-stretch:112%;font-weight:750;font-size:28px;line-height:1.15;margin:4px 0 6px}
+h2{font-stretch:105%;font-weight:700;font-size:18px;margin:26px 0 10px}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--sec);border-radius:12px;padding:12px 14px;cursor:pointer;text-align:left;width:100%}
+.item .t{font-weight:650}
+.item .s{font-size:14px;color:var(--muted)}
+.item .grow{flex:1;min-width:0}
+.thumb{width:48px;height:48px;border-radius:10px;object-fit:cover;background:var(--soft);flex:none;display:grid;place-items:center;font-weight:800;color:var(--sec)}
+.hero-photo{width:100%;max-height:300px;object-fit:cover;border-radius:14px;margin:6px 0 4px;background:var(--soft)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{background:var(--chip);border-radius:999px;padding:2px 10px;font-size:13px}
+.chip.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.chip.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.chip.good{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}
+dl.kv dt{color:var(--muted);font-size:14px}
+dl.kv dd{margin:0;overflow-wrap:anywhere}
+.entry{padding:10px 0;border-top:1px solid var(--line)}
+.entry:first-child{border-top:0;padding-top:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{appearance:none;border:0;border-radius:10px;padding:10px 16px;background:var(--sec);color:var(--surface);font-weight:650;cursor:pointer;min-height:44px}
+.btn.ghost{background:transparent;color:var(--sec);border:1.5px solid var(--sec)}
+.btn.danger{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
+.btn.small{min-height:36px;padding:6px 12px;font-size:14px}
+.btn:disabled{opacity:.5}
+.back{appearance:none;border:0;background:none;color:var(--sec);font-weight:650;padding:6px 0;cursor:pointer;min-height:44px}
+form.f{display:flex;flex-direction:column;gap:12px}
+label.l{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
+label.l input,label.l select,label.l textarea{color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;min-height:44px}
+label.l textarea{min-height:88px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:420px){.two{grid-template-columns:1fr}}
+.banner{border-radius:12px;padding:12px 14px;margin:0 0 14px;background:var(--soft);border:1px solid var(--line)}
+.banner.bad{background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs a{flex:1;text-align:center;padding:10px 4px 12px;text-decoration:none;color:var(--muted);font-weight:650;font-size:14px;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+nav.tabs a[aria-current="page"]{color:var(--ink)}
+nav.tabs a[aria-current="page"]::before{content:"";width:28px;height:4px;border-radius:2px;background:var(--sec);margin-bottom:4px}
+.empty{padding:24px 16px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:12px}
+.login{max-width:420px;margin:12vh auto 0;padding:0 20px}
+.login .brand{font-size:56px;margin-bottom:8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:20;max-width:90vw}
+.past summary{cursor:pointer;color:var(--muted);font-weight:650;padding:8px 0;min-height:44px}
+.code{font-size:28px;letter-spacing:.3em;text-align:center}
+@media (prefers-reduced-motion:no-preference){.item:active{transform:scale(.99)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="supabase.js"></script>
+<script>
+"use strict";
+const SUPABASE_URL='https://atcebetkiqisdgieodzr.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Y2ViZXRraXFpc2RnaWVvZHpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MDI4OTMsImV4cCI6MjEwODk3ODg5M30.wxFtZH2CjOxUOu8hRntbe_daewcTWNPLcMa8hOJWQ78';
+const BUCKET='trph-files';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+
+const DOC_KINDS=['Coggins','Health certificate','Registration certificate','Entry form','Stall reservation','Membership card','Other'];
+const CATS=['Open','Amateur','Youth'];
+const S={session:null,role:null,loading:true,data:null,offline:false,urls:{},loginStep:'email',loginEmail:''};
+const app=document.getElementById('app');
+
+/* ---------- helpers ---------- */
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+const days=d=>Math.round((new Date(d+'T12:00:00')-new Date(today()+'T12:00:00'))/864e5);
+const fmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+const range=(a,b)=>!a?'Dates to be confirmed':(!b||a===b?fmt(a):fmt(a)+' to '+fmt(b));
+const RW=()=>S.role==='editor';
+const by=(t,id)=>S.data?.[t]?.find(x=>x.id===id);
+function toast(m){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
+function route(){const h=(location.hash||'#shows').slice(1).split('/');return{tab:h[0]||'shows',id:h[1]||null,sub:h[2]||null}}
+function go(h){location.hash=h}
+function horseName(h){return h?(h.barn_name?`${h.barn_name}`:h.registered_name):'Unknown horse'}
+
+/* ---------- data ---------- */
+async function load(){
+  try{
+    const q=t=>sb.from(t).select('*');
+    const [shows,entries,horses,owners,people,documents,notes]=await Promise.all([q('shows'),q('entries'),q('horses'),q('horse_owners'),q('people'),q('documents'),q('notes')]);
+    for(const r of [shows,entries,horses,owners,people,documents,notes]) if(r.error) throw r.error;
+    S.data={shows:shows.data,entries:entries.data,horses:horses.data,owners:owners.data,people:people.data,documents:documents.data,notes:notes.data};
+    if(RW()){const m=await sb.from('members').select('*').order('email');S.data.members=m.data||[]}
+    S.offline=false;
+    try{localStorage.setItem('trph-cache',JSON.stringify({at:Date.now(),data:S.data}))}catch(e){}
+    await photoUrls();
+  }catch(e){
+    console.error(e);
+    try{const c=JSON.parse(localStorage.getItem('trph-cache')||'null');if(c){S.data=c.data;S.offline=true}}catch(_){}
+    if(!S.data) S.data={shows:[],entries:[],horses:[],owners:[],people:[],documents:[],notes:[]};
+  }
+  render();
+}
+async function photoUrls(){
+  const paths=S.data.horses.map(h=>h.photo_path).filter(p=>p&&!S.urls[p]);
+  if(!paths.length) return;
+  const {data}=await sb.storage.from(BUCKET).createSignedUrls(paths,3600*6);
+  (data||[]).forEach(d=>{if(d.signedUrl) S.urls[d.path]=d.signedUrl});
+}
+async function openFile(path){
+  const w=window.open('','_blank');
+  const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(path,600);
+  if(error||!data){w&&w.close();toast('This file could not be opened. Check your connection and try again.');return}
+  if(w) w.location=data.signedUrl; else location.href=data.signedUrl;
+}
+async function upload(file,prefix){
+  const safe=file.name.replace(/[^A-Za-z0-9._-]+/g,'_').slice(-80)||'file';
+  const path=`${prefix}/${crypto.randomUUID()}-${safe}`;
+  const {error}=await sb.storage.from(BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',upsert:false});
+  if(error) throw error;
+  return path;
+}
+async function save(table,id,row){
+  const r=id?await sb.from(table).update(row).eq('id',id).select().single():await sb.from(table).insert(row).select().single();
+  if(r.error) throw r.error;
+  return r.data;
+}
+async function del(table,id){const r=await sb.from(table).delete().eq('id',id);if(r.error) throw r.error}
+
+/* ---------- auth ---------- */
+async function initAuth(){
+  const {data}=await sb.auth.getSession();
+  S.session=data.session;
+  sb.auth.onAuthStateChange(async(ev,session)=>{
+    const was=S.session?.user?.id;S.session=session;
+    if(session&&session.user.id!==was) setTimeout(afterLogin,0);
+    if(!session){S.role=null;S.data=null;setTimeout(render,0)}
+  });
+  if(S.session) await afterLogin(); else {S.loading=false;render()}
+}
+async function afterLogin(){
+  S.loading=true;render();
+  const {data,error}=await sb.rpc('my_role');
+  if(error){ // offline: fall back to cache
+    const c=JSON.parse(localStorage.getItem('trph-role')||'null');S.role=c;
+  } else {S.role=data;try{localStorage.setItem('trph-role',JSON.stringify(data))}catch(e){}}
+  S.loading=false;
+  if(S.role) await load(); else render();
+}
+function loginView(){
+  if(S.loginStep==='code') return `<div class="login"><div class="brand">TRPH</div>
+  <p>We sent a 6-digit code to <strong>${esc(S.loginEmail)}</strong>. Enter it below. It can take a minute to arrive; check your spam folder too.</p>
+  <form class="f" data-form="code"><label class="l">Code<input class="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" required maxlength="8"></label>
+  <button class="btn">Sign in</button><button type="button" class="back" data-act="login-restart">Use another email</button></form></div>`;
+  return `<div class="login"><div class="brand">TRPH</div>
+  <p class="muted">Show schedule, horses and papers for Torey Roderick Performance Horses.</p>
+  <form class="f" data-form="email"><label class="l">Your email<input name="email" type="email" autocomplete="email" required></label>
+  <button class="btn">Email me a sign-in code</button></form>
+  <p class="small muted">Only people on the TRPH member list can see the data.</p></div>`;
+}
+
+/* ---------- views ---------- */
+function alertsFor(show){
+  const out=[];
+  if(show.entries_close){const d=days(show.entries_close);if(d>=0&&d<=14) out.push(`<span class="chip warn">Entries close ${fmt(show.entries_close)}</span>`)}
+  const end=show.end_date||show.start_date;
+  if(end&&days(end)>=0){
+    S.data.entries.filter(e=>e.show_id===show.id).forEach(e=>{
+      const cog=latestDoc('horse',e.horse_id,'Coggins');
+      if(!cog) out.push(`<span class="chip bad">${esc(horseName(by('horses',e.horse_id)))}: no Coggins on file</span>`);
+      else if(cog.expires&&cog.expires<end) out.push(`<span class="chip bad">${esc(horseName(by('horses',e.horse_id)))}: Coggins expires ${fmt(cog.expires)}</span>`);
+    });
+  }
+  return out.join('');
+}
+function latestDoc(type,id,kind){return S.data.documents.filter(d=>d.subject_type===type&&d.subject_id===id&&d.kind===kind).sort((a,b)=>(b.doc_date||'').localeCompare(a.doc_date||''))[0]}
+function showsView(){
+  const all=[...S.data.shows].sort((a,b)=>(a.start_date||'9999').localeCompare(b.start_date||'9999'));
+  const up=all.filter(s=>!s.start_date||days(s.end_date||s.start_date)>=0), past=all.filter(s=>!up.includes(s)).reverse();
+  const item=s=>{const n=S.data.entries.filter(e=>e.show_id===s.id).length;return `<button class="item" data-go="shows/${s.id}"><div class="grow"><div class="t">${esc(s.name)}</div><div class="s">${esc(range(s.start_date,s.end_date))}${s.location?'<br>'+esc(s.location):''}</div><div class="chips"><span class="chip">${n} ${n===1?'entry':'entries'}</span>${alertsFor(s)}</div></div></button>`};
+  return `<h1>Shows</h1>${RW()?`<div class="row" style="margin:8px 0 16px"><button class="btn" data-go="shows/new/edit">Add show</button></div>`:''}
+  ${up.length?`<div class="list">${up.map(item).join('')}</div>`:`<div class="empty">No upcoming shows.${RW()?' Add the next one with Add show.':''}</div>`}
+  ${past.length?`<details class="past"><summary>Past shows (${past.length})</summary><div class="list">${past.map(item).join('')}</div></details>`:''}`;
+}
+function showDetail(id){
+  const s=by('shows',id);if(!s) return notFound();
+  const ents=S.data.entries.filter(e=>e.show_id===id);
+  const x=s.extra||{};
+  return `<button class="back" data-go="shows">Shows</button><h1>${esc(s.name)}</h1>
+  <p class="muted">${esc(range(s.start_date,s.end_date))}${s.location?'<br>'+esc(s.location):''}</p>
+  <div class="chips">${alertsFor(s)}${x.cvi?'<span class="chip">Health certificate (CVI) required</span>':''}</div>
+  ${RW()?`<div class="row" style="margin:14px 0"><button class="btn ghost small" data-go="shows/${id}/edit">Edit show</button></div>`:''}
+  <div class="panel"><dl class="kv">${s.entries_close?`<dt>Entries close</dt><dd>${fmt(s.entries_close)}</dd>`:''}${x.office?`<dt>Show office</dt><dd>${linkify(x.office)}</dd>`:''}${s.notes?`<dt>Notes</dt><dd>${esc(s.notes)}</dd>`:''}</dl></div>
+  <h2>Entries</h2>
+  ${ents.length?`<div class="panel">${ents.map(e=>{const h=by('horses',e.horse_id),r=by('people',e.shown_by),o=by('people',e.owner_id);return `<div class="entry"><div class="row" style="justify-content:space-between"><a href="#horses/${e.horse_id}"><strong>${esc(horseName(h))}</strong></a>${RW()?`<button class="btn ghost small" data-go="shows/${id}/entry-${e.id}">Edit</button>`:''}</div>
+    <div class="small muted">Shown by ${r?`<a href="#people/${r.id}">${esc(r.name)}</a>`:'not set'}${o?` for ${`<a href="#people/${o.id}">${esc(o.name)}</a>`}`:''}</div>
+    <div class="chips">${(e.classes||[]).map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div>${e.notes?`<div class="small">${esc(e.notes)}</div>`:''}</div>`}).join('')}</div>`:`<div class="empty">No entries yet.</div>`}
+  ${RW()?`<div class="row" style="margin-top:10px"><button class="btn small" data-go="shows/${id}/entry-new">Add entry</button></div>`:''}
+  ${docsSection('show',id)}${notesSection('show',id)}`;
+}
+function linkify(t){return esc(t).replace(/\b([\w.+-]+@[\w-]+\.[\w.]+)\b/g,'<a href="mailto:$1">$1</a>').replace(/(\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4})/g,m=>`<a href="tel:${m.replace(/[^\d]/g,'')}">${m}</a>`)}
+function horsesView(){
+  const hs=[...S.data.horses].sort((a,b)=>horseName(a).localeCompare(horseName(b)));
+  return `<h1>Horses</h1>${RW()?`<div class="row" style="margin:8px 0 16px"><button class="btn" data-go="horses/new/edit">Add horse</button></div>`:''}
+  ${hs.length?`<div class="list">${hs.map(h=>{const u=h.photo_path&&S.urls[h.photo_path];const own=S.data.owners.filter(o=>o.horse_id===h.id).map(o=>by('people',o.person_id)?.name).filter(Boolean);return `<button class="item" data-go="horses/${h.id}">${u?`<img class="thumb" src="${esc(u)}" alt="">`:`<span class="thumb">${esc(horseName(h)[0]||'?')}</span>`}<div class="grow"><div class="t">${esc(horseName(h))}</div><div class="s">${esc(h.registered_name)}${own.length?'<br>Owned by '+esc(own.join(', ')):''}</div></div></button>`}).join('')}</div>`:`<div class="empty">No horses yet.</div>`}`;
+}
+function horseDetail(id){
+  const h=by('horses',id);if(!h) return notFound();
+  const x=h.extra||{},u=h.photo_path&&S.urls[h.photo_path];
+  const own=S.data.owners.filter(o=>o.horse_id===id).map(o=>by('people',o.person_id)).filter(Boolean);
+  const shows=S.data.entries.filter(e=>e.horse_id===id).map(e=>({e,s:by('shows',e.show_id)})).filter(v=>v.s&&days(v.s.end_date||v.s.start_date||'9999-12-31')>=0).sort((a,b)=>(a.s.start_date||'').localeCompare(b.s.start_date||''));
+  const kv=[['Registered name',h.registered_name],['AQHA',h.aqha_number],['NSBA',h.nsba_number],[h.other_registry,h.other_number],['Foaled',fmt(h.foaled)],['Sex',x.sex],['Color',x.color],['Sire',x.sire],['Dam',x.dam],['Breeder',x.breeder],['Markings',x.markings],['Microchip',x.microchip]].filter(([k,v])=>k&&v);
+  return `<button class="back" data-go="horses">Horses</button>${u?`<img class="hero-photo" src="${esc(u)}" alt="Photo of ${esc(horseName(h))}">`:''}<h1>${esc(horseName(h))}</h1>
+  ${own.length?`<p class="muted">Owned by ${own.map(p=>`<a href="#people/${p.id}">${esc(p.name)}</a>`).join(', ')}</p>`:''}
+  ${RW()?`<div class="row" style="margin:14px 0"><button class="btn ghost small" data-go="horses/${id}/edit">Edit horse</button></div>`:''}
+  <div class="panel"><dl class="kv">${kv.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${h.notes?`<p class="small" style="margin:12px 0 0">${esc(h.notes)}</p>`:''}</div>
+  <h2>Upcoming shows</h2>${shows.length?`<div class="list">${shows.map(({e,s})=>`<button class="item" data-go="shows/${s.id}"><div class="grow"><div class="t">${esc(s.name)}</div><div class="s">${esc(range(s.start_date,s.end_date))}</div><div class="chips">${(e.classes||[]).map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div></div></button>`).join('')}</div>`:`<div class="empty">Not entered in any upcoming show.</div>`}
+  ${docsSection('horse',id)}${notesSection('horse',id)}`;
+}
+function peopleView(){
+  const ps=[...S.data.people].sort((a,b)=>a.name.localeCompare(b.name));
+  return `<h1>People</h1>${RW()?`<div class="row" style="margin:8px 0 16px"><button class="btn" data-go="people/new/edit">Add person</button></div>`:''}
+  ${ps.length?`<div class="list">${ps.map(p=>`<button class="item" data-go="people/${p.id}"><span class="thumb">${esc(p.name[0]||'?')}</span><div class="grow"><div class="t">${esc(p.name)}</div><div class="s">${esc([p.rider_category&&p.rider_category+' rider',p.aqha_number&&'AQHA '+p.aqha_number].filter(Boolean).join(', '))}</div></div></button>`).join('')}</div>`:`<div class="empty">No people yet.</div>`}`;
+}
+function personDetail(id){
+  const p=by('people',id);if(!p) return notFound();
+  const hs=S.data.owners.filter(o=>o.person_id===id).map(o=>by('horses',o.horse_id)).filter(Boolean);
+  const rides=S.data.entries.filter(e=>e.shown_by===id).map(e=>({e,s:by('shows',e.show_id)})).filter(v=>v.s&&days(v.s.end_date||v.s.start_date||'9999-12-31')>=0);
+  const kv=[['Rider category',p.rider_category],['AQHA',p.aqha_number],['NSBA',p.nsba_number],['Phone',p.phone&&`<a href="tel:${esc(p.phone)}">${esc(p.phone)}</a>`],['Email',p.email&&`<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>`],['Address',p.address&&esc(p.address)]].filter(([,v])=>v);
+  return `<button class="back" data-go="people">People</button><h1>${esc(p.name)}</h1>
+  ${RW()?`<div class="row" style="margin:14px 0"><button class="btn ghost small" data-go="people/${id}/edit">Edit person</button></div>`:''}
+  <div class="panel"><dl class="kv">${kv.map(([k,v])=>`<dt>${k}</dt><dd>${k==='Rider category'||k==='AQHA'||k==='NSBA'?esc(v):v}</dd>`).join('')}</dl>${p.notes?`<p class="small" style="margin:12px 0 0">${esc(p.notes)}</p>`:''}</div>
+  ${hs.length?`<h2>Horses owned</h2><div class="list">${hs.map(h=>`<button class="item" data-go="horses/${h.id}"><div class="grow"><div class="t">${esc(horseName(h))}</div><div class="s">${esc(h.registered_name)}</div></div></button>`).join('')}</div>`:''}
+  ${rides.length?`<h2>Riding at upcoming shows</h2><div class="list">${rides.map(({e,s})=>`<button class="item" data-go="shows/${s.id}"><div class="grow"><div class="t">${esc(s.name)}</div><div class="s">${esc(horseName(by('horses',e.horse_id)))}, ${esc(range(s.start_date,s.end_date))}</div></div></button>`).join('')}</div>`:''}
+  ${docsSection('person',id)}${notesSection('person',id)}`;
+}
+function docsSection(type,id){
+  const ds=S.data.documents.filter(d=>d.subject_type===type&&d.subject_id===id).sort((a,b)=>(b.doc_date||'').localeCompare(a.doc_date||''));
+  return `<h2>Documents</h2>${ds.length?`<div class="list">${ds.map(d=>{let st='';if(d.expires){const n=days(d.expires);st=n<0?`<span class="chip bad">Expired ${fmt(d.expires)}</span>`:n<=30?`<span class="chip warn">Expires ${fmt(d.expires)}</span>`:`<span class="chip good">Valid until ${fmt(d.expires)}</span>`}
+    return `<div class="item" style="cursor:default"><div class="grow"><div class="t">${esc(d.title||d.kind)}</div><div class="s">${esc(d.kind)}${d.doc_date?', '+fmt(d.doc_date):''}</div><div class="chips">${st}${d.file_path?'':'<span class="chip">No file attached</span>'}</div></div>
+    <div class="row">${d.file_path?`<button class="btn small" data-act="open" data-path="${esc(d.file_path)}">Open</button>`:''}${RW()?`<button class="btn ghost small" data-go="${type==='horse'?'horses':type==='person'?'people':'shows'}/${id}/doc-${d.id}">Edit</button>`:''}</div></div>`}).join('')}</div>`:`<div class="empty">No documents yet.${RW()?' Photograph or scan them with Add document.':''}</div>`}
+  ${RW()?`<div class="row" style="margin-top:10px"><button class="btn small" data-go="${type==='horse'?'horses':type==='person'?'people':'shows'}/${id}/doc-new">Add document</button></div>`:''}`;
+}
+function notesSection(type,id){
+  const ns=S.data.notes.filter(n=>n.subject_type===type&&n.subject_id===id).sort((a,b)=>b.created_at.localeCompare(a.created_at));
+  if(!ns.length&&!RW()) return '';
+  return `<h2>Notes</h2>${ns.map(n=>`<div class="panel" style="margin-bottom:8px"><div>${esc(n.text)}</div><div class="row small muted" style="justify-content:space-between;margin-top:6px"><span>${new Date(n.created_at).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</span>${RW()?`<button class="back small" data-act="del-note" data-id="${n.id}" style="color:var(--bad)">Delete</button>`:''}</div></div>`).join('')}
+  ${RW()?`<form class="f" data-form="note" data-type="${type}" data-id="${id}"><label class="l">Add a note<textarea name="text" required></textarea></label><div><button class="btn small">Save note</button></div></form>`:''}`;
+}
+function membersView(){
+  if(!RW()) return notFound();
+  const ms=S.data.members||[],me=S.session.user.email.toLowerCase();
+  return `<h1>Members</h1><p class="muted">Editors can change everything. Readers can see the schedule, horses, people and documents, but cannot change them.</p>
+  <div class="list">${ms.map(m=>`<div class="item" style="cursor:default"><div class="grow"><div class="t">${esc(m.display_name||m.email)}</div><div class="s">${esc(m.email)}</div></div>
+   ${m.email===me?'<span class="chip">Editor (you)</span>':`<select data-act="role" data-email="${esc(m.email)}" aria-label="Role for ${esc(m.email)}" style="min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:6px"><option value="reader"${m.role==='reader'?' selected':''}>Reader</option><option value="editor"${m.role==='editor'?' selected':''}>Editor</option></select><button class="btn danger small" data-act="del-member" data-email="${esc(m.email)}">Remove</button>`}</div>`).join('')}</div>
+  <h2>Add a member</h2><form class="f" data-form="member"><div class="two"><label class="l">Name<input name="display_name"></label><label class="l">Email<input name="email" type="email" required></label></div>
+  <label class="l">Role<select name="role"><option value="reader">Reader</option><option value="editor">Editor</option></select></label><div><button class="btn">Add member</button></div></form>
+  <p class="small muted">After you add someone, send them the app address. They sign in with a code sent to that email.</p>`;
+}
+function notFound(){return `<div class="empty">This page no longer exists. <a href="#shows">Go to shows</a></div>`}
+
+/* ---------- forms ---------- */
+const inp=(name,label,v,type='text',extra='')=>`<label class="l">${label}<input name="${name}" type="${type}" value="${esc(v??'')}" ${extra}></label>`;
+const sel=(name,label,opts,v,blank=true)=>`<label class="l">${label}<select name="${name}">${blank?'<option value="">Not set</option>':''}${opts.map(o=>Array.isArray(o)?o:[o,o]).map(([val,lab])=>`<option value="${esc(val)}"${val===v?' selected':''}>${esc(lab)}</option>`).join('')}</select></label>`;
+const ta=(name,label,v)=>`<label class="l">${label}<textarea name="${name}">${esc(v??'')}</textarea></label>`;
+function showForm(id){
+  const s=id==='new'?{extra:{}}:by('shows',id);if(!s) return notFound();const x=s.extra||{};
+  return `<button class="back" data-go="${id==='new'?'shows':'shows/'+id}">Cancel</button><h1>${id==='new'?'Add show':'Edit show'}</h1>
+  <form class="f" data-form="show" data-id="${id}">${inp('name','Show name',s.name,'text','required')}${inp('location','Location',s.location)}
+  <div class="two">${inp('start_date','First day',s.start_date,'date')}${inp('end_date','Last day',s.end_date,'date')}</div>${inp('entries_close','Entries close',s.entries_close,'date')}
+  ${ta('office','Show office contact',x.office)}<label class="l" style="flex-direction:row;align-items:center;gap:10px;color:var(--ink)"><input type="checkbox" name="cvi" ${x.cvi?'checked':''} style="width:22px;height:22px"> Health certificate (CVI) required</label>
+  ${ta('notes','Notes',s.notes)}<div class="row"><button class="btn">Save show</button>${id!=='new'?`<button type="button" class="btn danger" data-act="del-show" data-id="${id}">Delete show</button>`:''}</div></form>`;
+}
+function entryForm(showId,eid){
+  const e=eid==='new'?{classes:[]}:by('entries',eid);if(!e) return notFound();
+  const hs=[...S.data.horses].sort((a,b)=>horseName(a).localeCompare(horseName(b))).map(h=>[h.id,horseName(h)+' ('+h.registered_name+')']);
+  const ps=[...S.data.people].sort((a,b)=>a.name.localeCompare(b.name)).map(p=>[p.id,p.name]);
+  return `<button class="back" data-go="shows/${showId}">Cancel</button><h1>${eid==='new'?'Add entry':'Edit entry'}</h1><p class="muted">${esc(by('shows',showId)?.name)}</p>
+  <form class="f" data-form="entry" data-show="${showId}" data-id="${eid}">${sel('horse_id','Horse',hs,e.horse_id,false)}${sel('shown_by','Shown by',ps,e.shown_by)}${sel('owner_id','Owner',ps,e.owner_id)}
+  ${inp('classes','Classes, separated by commas',(e.classes||[]).join(', '),'text','placeholder="Open Trail L1, Open Trail L2"')}${ta('notes','Notes',e.notes)}
+  <div class="row"><button class="btn">Save entry</button>${eid!=='new'?`<button type="button" class="btn danger" data-act="del-entry" data-id="${eid}" data-show="${showId}">Delete entry</button>`:''}</div></form>`;
+}
+function horseForm(id){
+  const h=id==='new'?{extra:{}}:by('horses',id);if(!h) return notFound();const x=h.extra||{};
+  const own=S.data.owners.filter(o=>o.horse_id===id).map(o=>o.person_id);
+  return `<button class="back" data-go="${id==='new'?'horses':'horses/'+id}">Cancel</button><h1>${id==='new'?'Add horse':'Edit horse'}</h1>
+  <form class="f" data-form="horse" data-id="${id}"><div class="two">${inp('registered_name','Registered name',h.registered_name,'text','required')}${inp('barn_name','Barn name',h.barn_name)}</div>
+  <div class="two">${inp('aqha_number','AQHA number',h.aqha_number)}${inp('nsba_number','NSBA number',h.nsba_number)}</div>
+  <div class="two">${inp('other_registry','Other registry',h.other_registry)}${inp('other_number','Other registry number',h.other_number)}</div>
+  <div class="two">${inp('foaled','Foaled',h.foaled,'date')}${sel('sex','Sex',['Mare','Gelding','Stallion'],x.sex)}</div>
+  <div class="two">${inp('color','Color',x.color)}${inp('breeder','Breeder',x.breeder)}</div><div class="two">${inp('sire','Sire',x.sire)}${inp('dam','Dam',x.dam)}</div>
+  ${inp('markings','Markings',x.markings)}${inp('microchip','Microchip',x.microchip)}
+  <fieldset class="panel" style="margin:0"><legend class="small muted">Owners</legend>${S.data.people.map(p=>`<label style="display:flex;gap:10px;align-items:center;min-height:40px"><input type="checkbox" name="owners" value="${p.id}" ${own.includes(p.id)?'checked':''} style="width:22px;height:22px">${esc(p.name)}</label>`).join('')||'<span class="small muted">Add people first.</span>'}</fieldset>
+  <label class="l">Photo<input type="file" name="photo" accept="image/*"></label>${ta('notes','Notes',h.notes)}
+  <div class="row"><button class="btn">Save horse</button>${id!=='new'?`<button type="button" class="btn danger" data-act="del-horse" data-id="${id}">Delete horse</button>`:''}</div></form>`;
+}
+function personForm(id){
+  const p=id==='new'?{}:by('people',id);if(!p) return notFound();
+  return `<button class="back" data-go="${id==='new'?'people':'people/'+id}">Cancel</button><h1>${id==='new'?'Add person':'Edit person'}</h1>
+  <form class="f" data-form="person" data-id="${id}">${inp('name','Full name',p.name,'text','required')}${sel('rider_category','Rider category',CATS,p.rider_category)}
+  <div class="two">${inp('aqha_number','AQHA number',p.aqha_number)}${inp('nsba_number','NSBA number',p.nsba_number)}</div>
+  <div class="two">${inp('phone','Phone',p.phone,'tel')}${inp('email','Email',p.email,'email')}</div>${inp('address','Address',p.address)}${ta('notes','Notes',p.notes)}
+  <div class="row"><button class="btn">Save person</button>${id!=='new'?`<button type="button" class="btn danger" data-act="del-person" data-id="${id}">Delete person</button>`:''}</div></form>`;
+}
+function docForm(tab,sid,did){
+  const type=tab==='horses'?'horse':tab==='people'?'person':'show';
+  const d=did==='new'?{kind:type==='horse'?'Coggins':'Other',doc_date:today()}:by('documents',did);if(!d) return notFound();
+  return `<button class="back" data-go="${tab}/${sid}">Cancel</button><h1>${did==='new'?'Add document':'Edit document'}</h1>
+  <form class="f" data-form="doc" data-type="${type}" data-sid="${sid}" data-id="${did}" data-tab="${tab}">${sel('kind','Type',DOC_KINDS,d.kind,false)}${inp('title','Title (optional)',d.title)}
+  <div class="two">${inp('doc_date','Date',d.doc_date,'date')}${inp('expires','Expires',d.expires,'date')}</div>
+  <label class="l">${d.file_path?'Replace file':'File (photo or PDF)'}<input type="file" name="file" accept="image/*,application/pdf" ${did==='new'?'required':''}></label>${ta('notes','Notes',d.notes)}
+  <div class="row"><button class="btn">Save document</button>${did!=='new'?`<button type="button" class="btn danger" data-act="del-doc" data-id="${did}" data-back="${tab}/${sid}">Delete document</button>`:''}</div></form>`;
+}
+
+/* ---------- legacy import (one time, editors) ---------- */
+function legacyPending(){
+  if(!RW()||!S.data) return 0;
+  return S.data.documents.filter(d=>d.extra?.legacy_asset&&!d.file_path).length+S.data.horses.filter(h=>h.extra?.legacy_photo_asset&&!h.photo_path).length;
+}
+async function runImport(btn){
+  btn.disabled=true;btn.textContent='Moving files…';
+  try{
+    const k=await sb.from('app_secrets').select('value').eq('name','legacy_import_key').single();if(k.error) throw k.error;
+    const raw=Uint8Array.from(atob(k.data.value),c=>c.charCodeAt(0));
+    const key=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);
+    const res=await fetch('legacy-import.json',{cache:'no-store'});if(!res.ok) throw new Error('Import file missing');
+    const pack=await res.json();let n=0;
+    for(const f of pack.files){
+      const iv=Uint8Array.from(atob(f.iv),c=>c.charCodeAt(0)),ct=Uint8Array.from(atob(f.data),c=>c.charCodeAt(0));
+      const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct);
+      const file=new File([plain],f.name,{type:f.type});
+      if(f.kind==='doc'){const d=S.data.documents.find(x=>x.legacy_id===f.legacy);if(!d||d.file_path) continue;
+        const p=await upload(file,`horse/${d.subject_id}`);await save('documents',d.id,{file_path:p});n++}
+      else{const h=S.data.horses.find(x=>x.legacy_id===f.legacy);if(!h||h.photo_path) continue;
+        const p=await upload(file,`horse/${h.id}/photo`);await save('horses',h.id,{photo_path:p});n++}
+    }
+    toast(`Moved ${n} files from the old app.`);await load();
+  }catch(e){console.error(e);btn.disabled=false;btn.textContent='Try again';toast('The files could not be moved: '+(e.message||e))}
+}
+
+/* ---------- render ---------- */
+function render(){
+  if(S.loading){app.innerHTML=`<div class="login"><div class="brand">TRPH</div><p class="muted">Loading…</p></div>`;return}
+  if(!S.session){document.body.className='';app.innerHTML=loginView();return}
+  if(!S.role){app.innerHTML=`<div class="login"><div class="brand">TRPH</div><p><strong>${esc(S.session.user.email)}</strong> is not on the TRPH member list.</p><p class="muted">Ask Torey or Marie-France to add this email, then sign in again.</p><button class="btn ghost" data-act="signout">Sign out</button></div>`;return}
+  if(!S.data){app.innerHTML=`<div class="login"><div class="brand">TRPH</div><p class="muted">Loading…</p></div>`;return}
+  const r=route();
+  document.body.className='sec-'+(['shows','horses','people','members'].includes(r.tab)?r.tab:'shows');
+  let body;
+  if(r.tab==='shows') body=!r.id?showsView():r.sub==='edit'?showForm(r.id):r.sub?.startsWith('entry-')?entryForm(r.id,r.sub.slice(6)):r.sub?.startsWith('doc-')?docForm('shows',r.id,r.sub.slice(4)):showDetail(r.id);
+  else if(r.tab==='horses') body=!r.id?horsesView():r.sub==='edit'?horseForm(r.id):r.sub?.startsWith('doc-')?docForm('horses',r.id,r.sub.slice(4)):horseDetail(r.id);
+  else if(r.tab==='people') body=!r.id?peopleView():r.sub==='edit'?personForm(r.id):r.sub?.startsWith('doc-')?docForm('people',r.id,r.sub.slice(4)):personDetail(r.id);
+  else if(r.tab==='members') body=membersView();
+  else body=notFound();
+  const pend=legacyPending();
+  const tabs=[['shows','Shows'],['horses','Horses'],['people','People']].concat(RW()?[['members','Members']]:[]);
+  app.innerHTML=`<header class="top"><span class="brand">TRPH</span><span class="sp"></span><span class="who">${esc(S.session.user.email)}<br>${RW()?'Editor':'Reader'}</span><button class="btn ghost small" data-act="signout">Sign out</button></header>
+  <main>${S.offline?`<div class="banner">You are offline. This is the last saved copy${RW()?'; changes can’t be saved until you reconnect':''}.</div>`:''}
+  ${pend&&!r.sub?`<div class="banner"><p style="margin:0 0 8px">${pend} ${pend===1?'file':'files'} from the old TRPH app (papers and horse photos) are ready to move here.</p><button class="btn small" data-act="import">Move files</button></div>`:''}${body}</main>
+  <nav class="tabs" aria-label="Sections">${tabs.map(([k,l])=>`<a href="#${k}" aria-current="${r.tab===k?'page':'false'}">${l}</a>`).join('')}</nav>`;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',async ev=>{
+  const g=ev.target.closest('[data-go]');if(g){ev.preventDefault();go(g.dataset.go);return}
+  const a=ev.target.closest('[data-act]');if(!a||a.tagName==='SELECT') return;
+  const act=a.dataset.act;
+  try{
+    if(act==='signout'){await sb.auth.signOut();S.loginStep='email';render()}
+    else if(act==='login-restart'){S.loginStep='email';render()}
+    else if(act==='open') openFile(a.dataset.path);
+    else if(act==='import') runImport(a);
+    else if(act==='del-note'){if(confirm('Delete this note?')){await del('notes',a.dataset.id);toast('Note deleted');await load()}}
+    else if(act==='del-entry'){if(confirm('Delete this entry?')){await del('entries',a.dataset.id);toast('Entry deleted');go('shows/'+a.dataset.show);await load()}}
+    else if(act==='del-show'){if(confirm('Delete this show and all its entries?')){await del('shows',a.dataset.id);toast('Show deleted');go('shows');await load()}}
+    else if(act==='del-horse'){if(confirm('Delete this horse? Its entries will remain without a horse.')){await del('horses',a.dataset.id);toast('Horse deleted');go('horses');await load()}}
+    else if(act==='del-person'){if(confirm('Delete this person?')){await del('people',a.dataset.id);toast('Person deleted');go('people');await load()}}
+    else if(act==='del-doc'){if(confirm('Delete this document and its file?')){const d=by('documents',a.dataset.id);if(d?.file_path) await sb.storage.from(BUCKET).remove([d.file_path]);await del('documents',a.dataset.id);toast('Document deleted');go(a.dataset.back);await load()}}
+    else if(act==='del-member'){if(confirm('Remove '+a.dataset.email+' from TRPH?')){const r=await sb.from('members').delete().eq('email',a.dataset.email);if(r.error) throw r.error;toast('Member removed');await load()}}
+  }catch(e){console.error(e);toast('That didn’t work: '+(e.message||e))}
+});
+document.addEventListener('change',async ev=>{
+  const s=ev.target.closest('select[data-act="role"]');if(!s) return;
+  const r=await sb.from('members').update({role:s.value}).eq('email',s.dataset.email);
+  if(r.error) toast('That didn’t work: '+r.error.message); else {toast('Role updated');load()}
+});
+document.addEventListener('submit',async ev=>{
+  const f=ev.target.closest('form[data-form]');if(!f) return;ev.preventDefault();
+  const fd=new FormData(f),v=k=>{const x=(fd.get(k)??'').toString().trim();return x===''?null:x};
+  const btn=f.querySelector('button:not([type=button])');if(btn) btn.disabled=true;
+  try{
+    switch(f.dataset.form){
+      case 'email':{const email=v('email').toLowerCase();const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});if(error) throw error;S.loginEmail=email;S.loginStep='code';render();return}
+      case 'code':{const {error}=await sb.auth.verifyOtp({email:S.loginEmail,token:v('code'),type:'email'});if(error) throw new Error('That code is not valid or has expired. Request a new one.');return}
+      case 'note':{await save('notes',null,{subject_type:f.dataset.type,subject_id:f.dataset.id,text:v('text')});toast('Note saved');await load();return}
+      case 'member':{const r=await sb.from('members').insert({email:v('email').toLowerCase(),role:v('role'),display_name:v('display_name')});if(r.error) throw r.error;toast('Member added');await load();return}
+      case 'show':{const id=f.dataset.id,old=id==='new'?{}:by('shows',id);
+        const row={name:v('name'),location:v('location'),start_date:v('start_date'),end_date:v('end_date'),entries_close:v('entries_close'),notes:v('notes'),extra:{...(old.extra||{}),office:v('office'),cvi:fd.get('cvi')==='on'}};
+        const s=await save('shows',id==='new'?null:id,row);toast('Show saved');go('shows/'+s.id);await load();return}
+      case 'entry':{const id=f.dataset.id;const row={show_id:f.dataset.show,horse_id:v('horse_id'),shown_by:v('shown_by'),owner_id:v('owner_id'),classes:(v('classes')||'').split(',').map(x=>x.trim()).filter(Boolean),notes:v('notes')};
+        await save('entries',id==='new'?null:id,row);toast('Entry saved');go('shows/'+f.dataset.show);await load();return}
+      case 'horse':{const id=f.dataset.id,old=id==='new'?{}:by('horses',id);
+        const row={registered_name:v('registered_name'),barn_name:v('barn_name'),aqha_number:v('aqha_number'),nsba_number:v('nsba_number'),other_registry:v('other_registry'),other_number:v('other_number'),foaled:v('foaled'),notes:v('notes'),
+          extra:{...(old.extra||{}),sex:v('sex'),color:v('color'),breeder:v('breeder'),sire:v('sire'),dam:v('dam'),markings:v('markings'),microchip:v('microchip')}};
+        const h=await save('horses',id==='new'?null:id,row);
+        const photo=fd.get('photo');if(photo&&photo.size){const p=await upload(photo,`horse/${h.id}/photo`);await save('horses',h.id,{photo_path:p});if(old.photo_path) await sb.storage.from(BUCKET).remove([old.photo_path])}
+        const want=fd.getAll('owners'),have=S.data.owners.filter(o=>o.horse_id===h.id).map(o=>o.person_id);
+        for(const p of want.filter(x=>!have.includes(x))){const r=await sb.from('horse_owners').insert({horse_id:h.id,person_id:p});if(r.error) throw r.error}
+        for(const p of have.filter(x=>!want.includes(x))){const r=await sb.from('horse_owners').delete().eq('horse_id',h.id).eq('person_id',p);if(r.error) throw r.error}
+        toast('Horse saved');go('horses/'+h.id);await load();return}
+      case 'person':{const id=f.dataset.id;const row={name:v('name'),rider_category:v('rider_category'),aqha_number:v('aqha_number'),nsba_number:v('nsba_number'),phone:v('phone'),email:v('email'),address:v('address'),notes:v('notes')};
+        const p=await save('people',id==='new'?null:id,row);toast('Person saved');go('people/'+p.id);await load();return}
+      case 'doc':{const id=f.dataset.id,old=id==='new'?{}:by('documents',id),file=fd.get('file');
+        const row={subject_type:f.dataset.type,subject_id:f.dataset.sid,kind:v('kind'),title:v('title'),doc_date:v('doc_date'),expires:v('expires'),notes:v('notes')};
+        if(file&&file.size){if(file.size>20*1024*1024) throw new Error('Files must be under 20 MB.');row.file_path=await upload(file,`${row.subject_type}/${row.subject_id}`);row.file_name=file.name;row.content_type=file.type}
+        await save('documents',id==='new'?null:id,row);if(row.file_path&&old.file_path) await sb.storage.from(BUCKET).remove([old.file_path]);
+        toast('Document saved');go(f.dataset.tab+'/'+f.dataset.sid);await load();return}
+    }
+  }catch(e){console.error(e);toast(e.message||String(e));if(btn) btn.disabled=false}
+});
+window.addEventListener('hashchange',()=>{render();scrollTo(0,0)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.role) load()});
+window.addEventListener('online',()=>{if(S.role) load()});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+initAuth();
+</script>
+</body>
+</html>
