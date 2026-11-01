@@ -102,7 +102,8 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const BUCKET='trph-files';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 
-const DOC_KINDS=['Coggins','Health certificate','Registration certificate','Entry form','Stall reservation','Membership card','Other'];
+const DOC_KINDS=['Coggins','Health certificate','Registration certificate','AQHA membership card','NSBA membership card','Other membership card','Entry form','Stall reservation','Other'];
+const MEMBER_KINDS=['AQHA membership card','NSBA membership card','Other membership card','Membership card'];
 const CATS=['Open','Amateur','Youth'];
 const S={session:null,role:null,loading:true,data:null,offline:false,urls:{},loginStep:'email',loginEmail:''};
 const app=document.getElementById('app');
@@ -206,9 +207,23 @@ function alertsFor(show){
       const cog=latestDoc('horse',e.horse_id,'Coggins');
       if(!cog) out.push(`<span class="chip bad">${esc(horseName(by('horses',e.horse_id)))}: no Coggins on file</span>`);
       else if(cog.expires&&cog.expires<end) out.push(`<span class="chip bad">${esc(horseName(by('horses',e.horse_id)))}: Coggins expires ${fmt(cog.expires)}</span>`);
+      [e.owner_id,e.shown_by].filter((v,i,a)=>v&&a.indexOf(v)===i).forEach(pid=>{
+        const card=latestDoc('person',pid,'AQHA membership card');
+        if(card&&card.expires&&card.expires<end) out.push(`<span class="chip bad">${esc(by('people',pid)?.name||'')}: AQHA membership expires ${fmt(card.expires)}</span>`);
+      });
     });
+    out.splice(0,out.length,...[...new Set(out)]);
   }
   return out.join('');
+}
+function memberChips(pid,onlyProblems){
+  return ['AQHA','NSBA'].map(org=>{const d=latestDoc('person',pid,org+' membership card');
+    if(!d) return '';
+    if(!d.expires) return onlyProblems?'':`<span class="chip">${org} card on file</span>`;
+    const n=days(d.expires);
+    if(n<0) return `<span class="chip bad">${org} membership expired ${fmt(d.expires)}</span>`;
+    if(n<=30) return `<span class="chip warn">${org} membership expires ${fmt(d.expires)}</span>`;
+    return onlyProblems?'':`<span class="chip good">${org} valid until ${fmt(d.expires)}</span>`;}).join('');
 }
 function latestDoc(type,id,kind){return S.data.documents.filter(d=>d.subject_type===type&&d.subject_id===id&&d.kind===kind).sort((a,b)=>(b.doc_date||'').localeCompare(a.doc_date||''))[0]}
 function showsView(){
@@ -256,16 +271,16 @@ function horseDetail(id){
 }
 function peopleView(){
   const ps=[...S.data.people].sort((a,b)=>a.name.localeCompare(b.name));
-  return `<h1>People</h1>${RW()?`<div class="row" style="margin:8px 0 16px"><button class="btn" data-go="people/new/edit">Add person</button></div>`:''}
-  ${ps.length?`<div class="list">${ps.map(p=>`<button class="item" data-go="people/${p.id}"><span class="thumb">${esc(p.name[0]||'?')}</span><div class="grow"><div class="t">${esc(p.name)}</div><div class="s">${esc([p.rider_category&&p.rider_category+' rider',p.aqha_number&&'AQHA '+p.aqha_number].filter(Boolean).join(', '))}</div></div></button>`).join('')}</div>`:`<div class="empty">No people yet.</div>`}`;
+  return `<h1>Owners</h1>${RW()?`<div class="row" style="margin:8px 0 16px"><button class="btn" data-go="people/new/edit">Add owner</button></div>`:''}
+  ${ps.length?`<div class="list">${ps.map(p=>`<button class="item" data-go="people/${p.id}"><span class="thumb">${esc(p.name[0]||'?')}</span><div class="grow"><div class="t">${esc(p.name)}</div><div class="s">${esc([p.rider_category&&p.rider_category+' rider',p.aqha_number&&'AQHA '+p.aqha_number].filter(Boolean).join(', '))}</div><div class="chips">${memberChips(p.id,true)}</div></div></button>`).join('')}</div>`:`<div class="empty">No owners yet.</div>`}`;
 }
 function personDetail(id){
   const p=by('people',id);if(!p) return notFound();
   const hs=S.data.owners.filter(o=>o.person_id===id).map(o=>by('horses',o.horse_id)).filter(Boolean);
   const rides=S.data.entries.filter(e=>e.shown_by===id).map(e=>({e,s:by('shows',e.show_id)})).filter(v=>v.s&&days(v.s.end_date||v.s.start_date||'9999-12-31')>=0);
   const kv=[['Rider category',p.rider_category],['AQHA',p.aqha_number],['NSBA',p.nsba_number],['Phone',p.phone&&`<a href="tel:${esc(p.phone)}">${esc(p.phone)}</a>`],['Email',p.email&&`<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>`],['Address',p.address&&esc(p.address)]].filter(([,v])=>v);
-  return `<button class="back" data-go="people">People</button><h1>${esc(p.name)}</h1>
-  ${RW()?`<div class="row" style="margin:14px 0"><button class="btn ghost small" data-go="people/${id}/edit">Edit person</button></div>`:''}
+  return `<button class="back" data-go="people">Owners</button><h1>${esc(p.name)}</h1>
+  ${RW()?`<div class="row" style="margin:14px 0"><button class="btn ghost small" data-go="people/${id}/edit">Edit details</button></div>`:''}<div class="chips">${memberChips(id)}</div>
   <div class="panel"><dl class="kv">${kv.map(([k,v])=>`<dt>${k}</dt><dd>${k==='Rider category'||k==='AQHA'||k==='NSBA'?esc(v):v}</dd>`).join('')}</dl>${p.notes?`<p class="small" style="margin:12px 0 0">${esc(p.notes)}</p>`:''}</div>
   ${hs.length?`<h2>Horses owned</h2><div class="list">${hs.map(h=>`<button class="item" data-go="horses/${h.id}"><div class="grow"><div class="t">${esc(horseName(h))}</div><div class="s">${esc(h.registered_name)}</div></div></button>`).join('')}</div>`:''}
   ${rides.length?`<h2>Riding at upcoming shows</h2><div class="list">${rides.map(({e,s})=>`<button class="item" data-go="shows/${s.id}"><div class="grow"><div class="t">${esc(s.name)}</div><div class="s">${esc(horseName(by('horses',e.horse_id)))}, ${esc(range(s.start_date,s.end_date))}</div></div></button>`).join('')}</div>`:''}
@@ -327,21 +342,21 @@ function horseForm(id){
   <div class="two">${inp('foaled','Foaled',h.foaled,'date')}${sel('sex','Sex',['Mare','Gelding','Stallion'],x.sex)}</div>
   <div class="two">${inp('color','Color',x.color)}${inp('breeder','Breeder',x.breeder)}</div><div class="two">${inp('sire','Sire',x.sire)}${inp('dam','Dam',x.dam)}</div>
   ${inp('markings','Markings',x.markings)}${inp('microchip','Microchip',x.microchip)}
-  <fieldset class="panel" style="margin:0"><legend class="small muted">Owners</legend>${S.data.people.map(p=>`<label style="display:flex;gap:10px;align-items:center;min-height:40px"><input type="checkbox" name="owners" value="${p.id}" ${own.includes(p.id)?'checked':''} style="width:22px;height:22px">${esc(p.name)}</label>`).join('')||'<span class="small muted">Add people first.</span>'}</fieldset>
+  <fieldset class="panel" style="margin:0"><legend class="small muted">Owners</legend>${S.data.people.map(p=>`<label style="display:flex;gap:10px;align-items:center;min-height:40px"><input type="checkbox" name="owners" value="${p.id}" ${own.includes(p.id)?'checked':''} style="width:22px;height:22px">${esc(p.name)}</label>`).join('')||'<span class="small muted">Add owners first.</span>'}</fieldset>
   <label class="l">Photo<input type="file" name="photo" accept="image/*"></label>${ta('notes','Notes',h.notes)}
   <div class="row"><button class="btn">Save horse</button>${id!=='new'?`<button type="button" class="btn danger" data-act="del-horse" data-id="${id}">Delete horse</button>`:''}</div></form>`;
 }
 function personForm(id){
   const p=id==='new'?{}:by('people',id);if(!p) return notFound();
-  return `<button class="back" data-go="${id==='new'?'people':'people/'+id}">Cancel</button><h1>${id==='new'?'Add person':'Edit person'}</h1>
+  return `<button class="back" data-go="${id==='new'?'people':'people/'+id}">Cancel</button><h1>${id==='new'?'Add owner':'Edit details'}</h1>
   <form class="f" data-form="person" data-id="${id}">${inp('name','Full name',p.name,'text','required')}${sel('rider_category','Rider category',CATS,p.rider_category)}
   <div class="two">${inp('aqha_number','AQHA number',p.aqha_number)}${inp('nsba_number','NSBA number',p.nsba_number)}</div>
   <div class="two">${inp('phone','Phone',p.phone,'tel')}${inp('email','Email',p.email,'email')}</div>${inp('address','Address',p.address)}${ta('notes','Notes',p.notes)}
-  <div class="row"><button class="btn">Save person</button>${id!=='new'?`<button type="button" class="btn danger" data-act="del-person" data-id="${id}">Delete person</button>`:''}</div></form>`;
+  <div class="row"><button class="btn">Save</button>${id!=='new'?`<button type="button" class="btn danger" data-act="del-person" data-id="${id}">Delete</button>`:''}</div></form>`;
 }
 function docForm(tab,sid,did){
   const type=tab==='horses'?'horse':tab==='people'?'person':'show';
-  const d=did==='new'?{kind:type==='horse'?'Coggins':'Other',doc_date:today()}:by('documents',did);if(!d) return notFound();
+  const d=did==='new'?{kind:type==='horse'?'Coggins':type==='person'?'AQHA membership card':'Other',doc_date:today()}:by('documents',did);if(!d) return notFound();
   return `<button class="back" data-go="${tab}/${sid}">Cancel</button><h1>${did==='new'?'Add document':'Edit document'}</h1>
   <form class="f" data-form="doc" data-type="${type}" data-sid="${sid}" data-id="${did}" data-tab="${tab}">${sel('kind','Type',DOC_KINDS,d.kind,false)}${inp('title','Title (optional)',d.title)}
   <div class="two">${inp('doc_date','Date',d.doc_date,'date')}${inp('expires','Expires',d.expires,'date')}</div>
@@ -390,7 +405,7 @@ function render(){
   else if(r.tab==='members') body=membersView();
   else body=notFound();
   const pend=legacyPending();
-  const tabs=[['shows','Shows'],['horses','Horses'],['people','People']].concat(RW()?[['members','Members']]:[]);
+  const tabs=[['shows','Shows'],['horses','Horses'],['people','Owners']].concat(RW()?[['members','Members']]:[]);
   app.innerHTML=`<header class="top"><span class="brand">TRPH</span><span class="sp"></span><span class="who">${esc(S.session.user.email)}<br>${RW()?'Editor':'Reader'}</span><button class="btn ghost small" data-act="signout">Sign out</button></header>
   <main>${S.offline?`<div class="banner">You are offline. This is the last saved copy${RW()?'; changes can’t be saved until you reconnect':''}.</div>`:''}
   ${pend&&!r.sub?`<div class="banner"><p style="margin:0 0 8px">${pend} ${pend===1?'file':'files'} from the old TRPH app (papers and horse photos) are ready to move here.</p><button class="btn small" data-act="import">Move files</button></div>`:''}${body}</main>
@@ -411,7 +426,7 @@ document.addEventListener('click',async ev=>{
     else if(act==='del-entry'){if(confirm('Delete this entry?')){await del('entries',a.dataset.id);toast('Entry deleted');go('shows/'+a.dataset.show);await load()}}
     else if(act==='del-show'){if(confirm('Delete this show and all its entries?')){await del('shows',a.dataset.id);toast('Show deleted');go('shows');await load()}}
     else if(act==='del-horse'){if(confirm('Delete this horse? Its entries will remain without a horse.')){await del('horses',a.dataset.id);toast('Horse deleted');go('horses');await load()}}
-    else if(act==='del-person'){if(confirm('Delete this person?')){await del('people',a.dataset.id);toast('Person deleted');go('people');await load()}}
+    else if(act==='del-person'){if(confirm('Delete this owner?')){await del('people',a.dataset.id);toast('Deleted');go('people');await load()}}
     else if(act==='del-doc'){if(confirm('Delete this document and its file?')){const d=by('documents',a.dataset.id);if(d?.file_path) await sb.storage.from(BUCKET).remove([d.file_path]);await del('documents',a.dataset.id);toast('Document deleted');go(a.dataset.back);await load()}}
     else if(act==='del-member'){if(confirm('Remove '+a.dataset.email+' from TRPH?')){const r=await sb.from('members').delete().eq('email',a.dataset.email);if(r.error) throw r.error;toast('Member removed');await load()}}
   }catch(e){console.error(e);toast('That didn’t work: '+(e.message||e))}
@@ -446,7 +461,7 @@ document.addEventListener('submit',async ev=>{
         for(const p of have.filter(x=>!want.includes(x))){const r=await sb.from('horse_owners').delete().eq('horse_id',h.id).eq('person_id',p);if(r.error) throw r.error}
         toast('Horse saved');go('horses/'+h.id);await load();return}
       case 'person':{const id=f.dataset.id;const row={name:v('name'),rider_category:v('rider_category'),aqha_number:v('aqha_number'),nsba_number:v('nsba_number'),phone:v('phone'),email:v('email'),address:v('address'),notes:v('notes')};
-        const p=await save('people',id==='new'?null:id,row);toast('Person saved');go('people/'+p.id);await load();return}
+        const p=await save('people',id==='new'?null:id,row);toast('Saved');go('people/'+p.id);await load();return}
       case 'doc':{const id=f.dataset.id,old=id==='new'?{}:by('documents',id),file=fd.get('file');
         const row={subject_type:f.dataset.type,subject_id:f.dataset.sid,kind:v('kind'),title:v('title'),doc_date:v('doc_date'),expires:v('expires'),notes:v('notes')};
         if(file&&file.size){if(file.size>20*1024*1024) throw new Error('Files must be under 20 MB.');row.file_path=await upload(file,`${row.subject_type}/${row.subject_id}`);row.file_name=file.name;row.content_type=file.type}
