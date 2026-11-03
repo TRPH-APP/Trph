@@ -279,11 +279,12 @@ function usualOf(pid){const p=by('people',pid);return (p?.extra?.usual_classes)|
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const ABBR={am:'amateur',amat:'amateur',yth:'youth',nov:'novice',sel:'select',selct:'select',eq:'equitation',hsm:'horsemanship',hmsp:'horsemanship',hsmship:'horsemanship',hus:'hunter under saddle',wp:'western pleasure',pl:'pleasure',west:'western',jr:'junior',sr:'senior',wk:'working',work:'working',huntr:'hunter',o:'over',f:'fences',np:'non pro',nonpro:'non pro',gr:'green',showman:'showmanship',wr:'western riding'};
 function classKey(x){
-  let t=norm(String(x||'').replace(/\$\s*\d+[\d,.]*(\s*added)?/gi,' ').replace(/&\s*nsba\b/gi,' ')).split(' ').filter(Boolean);
+  let t=norm(String(x||'').replace(/\$\s*\d+[\d,.]*(\s*added)?/gi,' ').replace(/&\s*nsba\b/gi,' ').replace(/\blevel\s*([123])/gi,'L$1')).split(' ').filter(Boolean);
   t=t.flatMap(w=>(ABBR[w]||w).split(' '));
   const lv=t.filter(w=>/^l[123]$/.test(w));
   let base=t.filter(w=>!/^l[123]$/.test(w)&&w!=='level'&&w!=='nsba'&&w!=='added');
   if(lv.includes('l1')) base=base.filter(w=>w!=='novice');
+  if(base.includes('select')) base=base.filter(w=>w!=='amateur');
   return {base:[...new Set(base)].sort().join(' '),lv};
 }
 // does a rider's usual class (e.g. "Select Trail L2") match a class on the show bill (e.g. "10/510 Select Trail")?
