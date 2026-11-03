@@ -96,6 +96,35 @@ nav.tabs a[aria-current="page"]::before{content:"";width:28px;height:4px;border-
 .cls .grow{flex:1;min-width:0}
 .logo{width:34px;height:34px;flex:none;color:var(--ink)}
 .login .logo{width:84px;height:84px;margin-bottom:6px}
+.agenda{background:#fff;color:#1d1d1f;border:1px solid var(--line);border-radius:14px;padding:16px;color-scheme:light}
+.ag-head{display:flex;align-items:center;gap:12px;border-bottom:2px solid #1d1d1f;padding-bottom:8px;margin-bottom:10px}
+.ag-head .logo{width:42px;height:42px;color:#1d1d1f}
+.ag-title{font-weight:800;font-stretch:112%;font-size:20px;line-height:1.15}
+.ag-sub{font-size:13px;color:#555}
+.ag-org{margin-left:auto;font-size:12px;color:#555;text-align:right}
+.ag-tab{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:12px}
+.ag-tab th,.ag-tab td{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}
+.ag-tab th{background:#f1f1f3;font-weight:700}
+.ag-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.ag-grid{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:8px}
+@media (max-width:640px){.ag-grid{grid-template-columns:1fr}}
+.ag-day{border:1px solid #bbb;border-radius:8px;padding:6px;min-width:0;break-inside:avoid-page}
+.ag-day h3{margin:0 0 6px;font-size:14px;background:#1d1d1f;color:#fff;border-radius:5px;padding:4px 6px}
+.ag-box{border:1px solid #ccc;border-left:5px solid #888;border-radius:5px;padding:4px 6px;margin-bottom:5px;break-inside:avoid;overflow-wrap:anywhere}
+.ag-c{font-weight:700;font-size:12.5px;line-height:1.25}
+.ag-no{color:#555;font-weight:600}
+.ag-w{font-size:12px;line-height:1.25}
+.ag-t{font-size:11px;color:#555;line-height:1.25}
+.ag-other{font-size:12px;margin-top:10px}
+.ag-foot{font-size:10.5px;color:#666;margin-top:10px}
+@media print{
+  @page{size:letter landscape;margin:0.4in}
+  body{background:#fff;padding:0}
+  header.top,nav.tabs,.noprint,.toast,.banner{display:none!important}
+  main{max-width:none;padding:0}
+  .agenda{border:0;padding:0;border-radius:0}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 @media (prefers-reduced-motion:no-preference){.item:active{transform:scale(.99)}}
 </style>
 </head>
@@ -248,6 +277,24 @@ function timingHtml(list){
 }
 function usualOf(pid){const p=by('people',pid);return (p?.extra?.usual_classes)||[]}
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const ABBR={am:'amateur',amat:'amateur',yth:'youth',nov:'novice',sel:'select',selct:'select',eq:'equitation',hsm:'horsemanship',hmsp:'horsemanship',hsmship:'horsemanship',hus:'hunter under saddle',wp:'western pleasure',pl:'pleasure',west:'western',jr:'junior',sr:'senior',wk:'working',work:'working',huntr:'hunter',o:'over',f:'fences',np:'non pro',nonpro:'non pro',gr:'green',showman:'showmanship',wr:'western riding'};
+function classKey(x){
+  let t=norm(String(x||'').replace(/\$\s*\d+[\d,.]*(\s*added)?/gi,' ').replace(/&\s*nsba\b/gi,' ')).split(' ').filter(Boolean);
+  t=t.flatMap(w=>(ABBR[w]||w).split(' '));
+  const lv=t.filter(w=>/^l[123]$/.test(w));
+  let base=t.filter(w=>!/^l[123]$/.test(w)&&w!=='level'&&w!=='nsba'&&w!=='added');
+  if(lv.includes('l1')) base=base.filter(w=>w!=='novice');
+  return {base:[...new Set(base)].sort().join(' '),lv};
+}
+// does a rider's usual class (e.g. "Select Trail L2") match a class on the show bill (e.g. "10/510 Select Trail")?
+function classMatch(usual,billName){
+  const u=classKey(usual),b=classKey(billName);
+  if(u.base!==b.base) return false;
+  if(!u.lv.length) return !b.lv.length||!b.lv.includes('l1')||b.lv.length>1;
+  if(u.lv.includes('l1')) return b.lv.includes('l1');
+  // L2 or L3 rider: same level, or the unlevelled class (open to L2 and L3)
+  return b.lv.length?u.lv.some(l=>b.lv.includes(l)):true;
+}
 function pagesOf(d){const out=[];if(d.file_path) out.push({path:d.file_path,name:d.file_name,type:d.content_type});(d.more_files||[]).forEach(f=>f&&f.path&&out.push(f));return out}
 function latestDoc(type,id,kind){return S.data.documents.filter(d=>d.subject_type===type&&d.subject_id===id&&d.kind===kind).sort((a,b)=>(b.doc_date||'').localeCompare(a.doc_date||''))[0]}
 function showsView(){
@@ -266,6 +313,7 @@ function showDetail(id){
   <p class="muted">${esc(range(s.start_date,s.end_date))}${s.location?'<br>'+esc(s.location):''}</p>
   <div class="chips">${alertsFor(s)}${x.cvi?'<span class="chip">Health certificate (CVI) required</span>':''}</div>
   ${RW()?`<div class="row" style="margin:14px 0"><button class="btn ghost small" data-go="shows/${id}/edit">Edit show</button></div>`:''}
+  ${ents.length?`<div class="row" style="margin:${RW()?'0 0 14px':'14px 0'}"><button class="btn small" data-go="shows/${id}/agenda">Show agenda (print)</button></div>`:''}
   <div class="panel"><dl class="kv">${s.entries_close?`<dt>Entries close</dt><dd>${fmt(s.entries_close)}</dd>`:''}${x.office?`<dt>Show office</dt><dd>${linkify(x.office)}</dd>`:''}${s.notes?`<dt>Notes</dt><dd>${esc(s.notes)}</dd>`:''}</dl></div>
   <h2>Entries</h2>
   ${ents.length?`<div class="panel">${ents.map(e=>{const h=by('horses',e.horse_id),r=by('people',e.shown_by),o=by('people',e.owner_id),ec=entryClasses(e);return `<div class="entry"><div class="row" style="justify-content:space-between"><a href="#horses/${e.horse_id}"><strong>${esc(horseName(h))}</strong></a>${RW()?`<button class="btn ghost small" data-go="shows/${id}/entry-${e.id}">Edit</button>`:''}</div>
@@ -288,6 +336,35 @@ function scheduleSection(showId){
   const days=[...new Set(cs.map(c=>c.class_date||''))];
   return `<h2>Class schedule</h2>${cs.length?`<div class="panel">${days.map(d=>`<div class="dayhead">${esc(dayLbl(d))}</div>${cs.filter(c=>(c.class_date||'')===d).map(c=>`<div class="cls"><div class="grow"><div><b>${esc(classLbl(c))}</b></div><div class="small muted">${[c.start_time&&fmtT(c.start_time),c.time_note,c.arena].filter(Boolean).map(esc).join(' · ')}</div></div>${RW()?`<button class="btn ghost small" data-go="shows/${showId}/class-${c.id}">Edit</button>`:''}</div>`).join('')}`).join('')}</div>`:`<div class="empty">No class schedule yet. When the show bill is published, add the classes here (or send it to Claude).</div>`}
   ${RW()?`<div class="row" style="margin-top:10px"><button class="btn small" data-go="shows/${showId}/class-new">Add class</button></div>`:''}`;
+}
+const RIDER_COLORS=['#2456C7','#B03E35','#2F7A4E','#9C6B12','#7A3FB0','#1F6E8A','#C2410C','#4B5563'];
+function agendaView(id){
+  const s=by('shows',id);if(!s) return notFound();
+  const ents=S.data.entries.filter(e=>e.show_id===id);
+  const riders=[...new Set(ents.map(e=>e.shown_by||'none'))];
+  const col=pid=>RIDER_COLORS[riders.indexOf(pid)%RIDER_COLORS.length];
+  const rows=ents.flatMap(e=>entryClasses(e).map(c=>({c,e})));
+  rows.sort((a,b)=>cmpClass(a.c,b.c));
+  const days=[...new Set(rows.map(r=>r.c.class_date||''))];
+  const rname=e=>by('people',e.shown_by)?.name||'Rider not set';
+  const box=({c,e})=>`<div class="ag-box" style="border-left-color:${col(e.shown_by||'none')}">
+    <div class="ag-c">${c.class_no?`<span class="ag-no">#${esc(c.class_no)}</span> `:''}${esc(c.name)}</div>
+    <div class="ag-w"><b>${esc(horseName(by('horses',e.horse_id)))}</b> · ${esc(rname(e))}</div>
+    ${[c.start_time&&fmtT(c.start_time),c.time_note,c.arena].filter(Boolean).length?`<div class="ag-t">${[c.start_time&&fmtT(c.start_time),c.time_note,c.arena].filter(Boolean).map(esc).join(' · ')}</div>`:''}</div>`;
+  const ncols=Math.min(Math.max(days.length,1),5);
+  const other=ents.filter(e=>(e.classes||[]).length);
+  const timing=riders.filter(p=>p!=='none').map(pid=>{const l=rows.filter(r=>r.e.shown_by===pid&&r.c.class_date);if(!l.length) return '';const f=l[0].c,z=l[l.length-1].c;
+    return `<tr><td><span class="ag-dot" style="background:${col(pid)}"></span>${esc(by('people',pid)?.name)}</td><td>${esc([...new Set(ents.filter(e=>e.shown_by===pid).map(e=>horseName(by('horses',e.horse_id))))].join(', '))}</td><td>${l.length}</td><td>${esc(dayLbl(f.class_date))}${f.start_time?', '+fmtT(f.start_time):''}<br><b>arrive by ${esc(dayLbl(prevDay(f.class_date)))}</b></td><td>${esc(dayLbl(z.class_date))}<br><b>free to leave after</b></td></tr>`}).join('');
+  return `<div class="noprint"><button class="back" data-go="shows/${id}">${esc(s.name)}</button>
+    <div class="row" style="margin:6px 0 14px"><button class="btn" data-act="print">Print or save as PDF</button></div>
+    <p class="small muted">Prints on US Letter, landscape. On iPhone: Print, then pinch out on the preview to save or share it as a PDF.</p></div>
+  <div class="agenda">
+    <div class="ag-head">${LOGO_SVG}<div><div class="ag-title">${esc(s.name)}</div><div class="ag-sub">${esc(range(s.start_date,s.end_date))}${s.location?' · '+esc(s.location):''}</div></div><div class="ag-org">Torey Roderick Performance Horses</div></div>
+    ${timing?`<table class="ag-tab"><thead><tr><th>Rider</th><th>Horses</th><th>Classes</th><th>First class</th><th>Last class</th></tr></thead><tbody>${timing}</tbody></table>`:''}
+    ${rows.length?`<div class="ag-grid" style="--n:${ncols}">${days.map(d=>`<section class="ag-day"><h3>${esc(d?new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}):'Date to be confirmed')}</h3>${rows.filter(r=>(r.c.class_date||'')===d).map(box).join('')}</section>`).join('')}</div>`:`<div class="empty">No classes picked from the show schedule yet.</div>`}
+    ${other.length?`<div class="ag-other"><b>Not on the schedule yet:</b> ${other.map(e=>`${esc(horseName(by('horses',e.horse_id)))} (${esc(rname(e))}): ${esc(e.classes.join(', '))}`).join(' · ')}</div>`:''}
+    <div class="ag-foot">Printed ${esc(new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}))} · Times after the first class of each day are approximate (“after …”). Check the show office for changes.</div>
+  </div>`;
 }
 function classForm(showId,cid){
   const sh=by('shows',showId);const c=cid==='new'?{class_date:sh?.start_date}:S.data.classes.find(x=>x.id===cid);if(!c) return notFound();
@@ -387,8 +464,8 @@ function applyUsual(form,onlyIfEmpty){
   const pid=form.querySelector('[name=shown_by]')?.value;const us=usualOf(pid);if(!us.length){if(!onlyIfEmpty) toast('No usual classes saved for this rider.');return}
   const boxes=[...form.querySelectorAll('input[name=class_ids]')];
   if(onlyIfEmpty&&(boxes.some(b=>b.checked)||form.querySelector('[name=classes]').value.trim())) return;
-  if(boxes.length){let n=0;boxes.forEach(b=>{if(us.some(u=>norm(u)===norm(b.dataset.name))){b.checked=true;n++}});
-    const missing=us.filter(u=>!boxes.some(b=>norm(u)===norm(b.dataset.name)));
+  if(boxes.length){let n=0;boxes.forEach(b=>{if(us.some(u=>classMatch(u,b.dataset.name))){b.checked=true;n++}});
+    const missing=us.filter(u=>!boxes.some(b=>classMatch(u,b.dataset.name)));
     if(missing.length){const t=form.querySelector('[name=classes]');t.value=[t.value,...missing].filter(Boolean).join(', ')}
     toast(n?`Ticked ${n} usual ${n===1?'class':'classes'}.`:'Usual classes added below.');}
   else{const t=form.querySelector('[name=classes]');t.value=us.join(', ');toast('Usual classes filled in.')}
@@ -461,7 +538,7 @@ function render(){
   const r=route();
   document.body.className='sec-'+(['shows','horses','people','members'].includes(r.tab)?r.tab:'shows');
   let body;
-  if(r.tab==='shows') body=!r.id?showsView():r.sub==='edit'?showForm(r.id):r.sub?.startsWith('entry-')?entryForm(r.id,r.sub.slice(6)):r.sub?.startsWith('class-')?classForm(r.id,r.sub.slice(6)):r.sub?.startsWith('doc-')?docForm('shows',r.id,r.sub.slice(4)):showDetail(r.id);
+  if(r.tab==='shows') body=!r.id?showsView():r.sub==='edit'?showForm(r.id):r.sub==='agenda'?agendaView(r.id):r.sub?.startsWith('entry-')?entryForm(r.id,r.sub.slice(6)):r.sub?.startsWith('class-')?classForm(r.id,r.sub.slice(6)):r.sub?.startsWith('doc-')?docForm('shows',r.id,r.sub.slice(4)):showDetail(r.id);
   else if(r.tab==='horses') body=!r.id?horsesView():r.sub==='edit'?horseForm(r.id):r.sub?.startsWith('doc-')?docForm('horses',r.id,r.sub.slice(4)):horseDetail(r.id);
   else if(r.tab==='people') body=!r.id?peopleView():r.sub==='edit'?personForm(r.id):r.sub?.startsWith('doc-')?docForm('people',r.id,r.sub.slice(4)):personDetail(r.id);
   else if(r.tab==='members') body=membersView();
@@ -480,7 +557,8 @@ document.addEventListener('click',async ev=>{
   const a=ev.target.closest('[data-act]');if(!a||a.tagName==='SELECT') return;
   const act=a.dataset.act;
   try{
-    if(act==='signout'){await sb.auth.signOut();S.loginStep='email';render()}
+    if(act==='print'){window.print()}
+    else if(act==='signout'){await sb.auth.signOut();S.loginStep='email';render()}
     else if(act==='login-restart'){S.loginStep='email';render()}
     else if(act==='open') openFile(a.dataset.path);
     else if(act==='import') runImport(a);
