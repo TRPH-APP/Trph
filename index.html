@@ -338,9 +338,11 @@ function scheduleSection(showId){
   ${RW()?`<div class="row" style="margin-top:10px"><button class="btn small" data-go="shows/${showId}/class-new">Add class</button></div>`:''}`;
 }
 const RIDER_COLORS=['#2456C7','#B03E35','#2F7A4E','#9C6B12','#7A3FB0','#1F6E8A','#C2410C','#4B5563'];
-function agendaView(id){
+function agendaView(id,only){
   const s=by('shows',id);if(!s) return notFound();
-  const ents=S.data.entries.filter(e=>e.show_id===id);
+  const allEnts=S.data.entries.filter(e=>e.show_id===id);
+  const who=[...new Set(allEnts.flatMap(e=>[e.shown_by,e.owner_id]).filter(Boolean))].map(pid=>by('people',pid)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+  const ents=only?allEnts.filter(e=>e.shown_by===only||e.owner_id===only):allEnts;
   const riders=[...new Set(ents.map(e=>e.shown_by||'none'))];
   const col=pid=>RIDER_COLORS[riders.indexOf(pid)%RIDER_COLORS.length];
   const rows=ents.flatMap(e=>entryClasses(e).map(c=>({c,e})));
@@ -357,9 +359,10 @@ function agendaView(id){
     return `<tr><td><span class="ag-dot" style="background:${col(pid)}"></span>${esc(by('people',pid)?.name)}</td><td>${esc([...new Set(ents.filter(e=>e.shown_by===pid).map(e=>horseName(by('horses',e.horse_id))))].join(', '))}</td><td>${l.length}</td><td>${esc(dayLbl(f.class_date))}${f.start_time?', '+fmtT(f.start_time):''}<br><b>arrive by ${esc(dayLbl(prevDay(f.class_date)))}</b></td><td>${esc(dayLbl(z.class_date))}<br><b>free to leave after</b></td></tr>`}).join('');
   return `<div class="noprint"><button class="back" data-go="shows/${id}">${esc(s.name)}</button>
     <div class="row" style="margin:6px 0 14px"><button class="btn" data-act="print">Print or save as PDF</button></div>
+    ${who.length>1?`<div class="chips" style="margin:0 0 12px"><a class="chip" href="#shows/${id}/agenda" style="${!only?'background:var(--sec);color:var(--surface)':''}">Everyone</a>${who.map(p=>`<a class="chip" href="#shows/${id}/agenda-${p.id}" style="${only===p.id?'background:var(--sec);color:var(--surface)':''}">${esc(p.name)}</a>`).join('')}</div>`:''}
     <p class="small muted">Prints on US Letter, landscape. On iPhone: Print, then pinch out on the preview to save or share it as a PDF.</p></div>
   <div class="agenda">
-    <div class="ag-head">${LOGO_SVG}<div><div class="ag-title">${esc(s.name)}</div><div class="ag-sub">${esc(range(s.start_date,s.end_date))}${s.location?' · '+esc(s.location):''}</div></div><div class="ag-org">Torey Roderick Performance Horses</div></div>
+    <div class="ag-head">${LOGO_SVG}<div><div class="ag-title">${esc(s.name)}</div>${only?`<div class="ag-title" style="font-size:16px">${esc(by('people',only)?.name||'')}</div>`:''}<div class="ag-sub">${esc(range(s.start_date,s.end_date))}${s.location?' · '+esc(s.location):''}</div></div><div class="ag-org">Torey Roderick Performance Horses</div></div>
     ${timing?`<table class="ag-tab"><thead><tr><th>Rider</th><th>Horses</th><th>Classes</th><th>First class</th><th>Last class</th></tr></thead><tbody>${timing}</tbody></table>`:''}
     ${rows.length?`<div class="ag-grid" style="--n:${ncols}">${days.map(d=>`<section class="ag-day"><h3>${esc(d?new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}):'Date to be confirmed')}</h3>${rows.filter(r=>(r.c.class_date||'')===d).map(box).join('')}</section>`).join('')}</div>`:`<div class="empty">No classes picked from the show schedule yet.</div>`}
     ${other.length?`<div class="ag-other"><b>Not on the schedule yet:</b> ${other.map(e=>`${esc(horseName(by('horses',e.horse_id)))} (${esc(rname(e))}): ${esc(e.classes.join(', '))}`).join(' · ')}</div>`:''}
@@ -538,7 +541,7 @@ function render(){
   const r=route();
   document.body.className='sec-'+(['shows','horses','people','members'].includes(r.tab)?r.tab:'shows');
   let body;
-  if(r.tab==='shows') body=!r.id?showsView():r.sub==='edit'?showForm(r.id):r.sub==='agenda'?agendaView(r.id):r.sub?.startsWith('entry-')?entryForm(r.id,r.sub.slice(6)):r.sub?.startsWith('class-')?classForm(r.id,r.sub.slice(6)):r.sub?.startsWith('doc-')?docForm('shows',r.id,r.sub.slice(4)):showDetail(r.id);
+  if(r.tab==='shows') body=!r.id?showsView():r.sub==='edit'?showForm(r.id):r.sub==='agenda'||r.sub?.startsWith('agenda-')?agendaView(r.id,r.sub.slice(7)||null):r.sub?.startsWith('entry-')?entryForm(r.id,r.sub.slice(6)):r.sub?.startsWith('class-')?classForm(r.id,r.sub.slice(6)):r.sub?.startsWith('doc-')?docForm('shows',r.id,r.sub.slice(4)):showDetail(r.id);
   else if(r.tab==='horses') body=!r.id?horsesView():r.sub==='edit'?horseForm(r.id):r.sub?.startsWith('doc-')?docForm('horses',r.id,r.sub.slice(4)):horseDetail(r.id);
   else if(r.tab==='people') body=!r.id?peopleView():r.sub==='edit'?personForm(r.id):r.sub?.startsWith('doc-')?docForm('people',r.id,r.sub.slice(4)):personDetail(r.id);
   else if(r.tab==='members') body=membersView();
