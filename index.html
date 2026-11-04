@@ -117,6 +117,8 @@ nav.tabs a[aria-current="page"]::before{content:"";width:28px;height:4px;border-
 .ag-t{font-size:11px;color:#555;line-height:1.25}
 .ag-other{font-size:12px;margin-top:10px}
 .ag-foot{font-size:10.5px;color:#666;margin-top:10px}
+.pdfmode{position:fixed;left:-20000px;top:0;width:1000px;background:#fff;color:#1d1d1f;padding:0}
+.pdfmode .ag-grid{grid-template-columns:repeat(var(--n),minmax(0,1fr))!important}
 @media print{
   @page{size:letter landscape;margin:0.4in}
   body{background:#fff;padding:0}
@@ -359,9 +361,9 @@ function agendaView(id,only){
   const timing=riders.filter(p=>p!=='none').map(pid=>{const l=rows.filter(r=>r.e.shown_by===pid&&r.c.class_date);if(!l.length) return '';const f=l[0].c,z=l[l.length-1].c;
     return `<tr><td><span class="ag-dot" style="background:${col(pid)}"></span>${esc(by('people',pid)?.name)}</td><td>${esc([...new Set(ents.filter(e=>e.shown_by===pid).map(e=>horseName(by('horses',e.horse_id))))].join(', '))}</td><td>${l.length}</td><td>${esc(dayLbl(f.class_date))}${f.start_time?', '+fmtT(f.start_time):''}<br><b>arrive by ${esc(dayLbl(prevDay(f.class_date)))}</b></td><td>${esc(dayLbl(z.class_date))}<br><b>free to leave after</b></td></tr>`}).join('');
   return `<div class="noprint"><button class="back" data-go="shows/${id}">${esc(s.name)}</button>
-    <div class="row" style="margin:6px 0 14px"><button class="btn" data-act="print">Print or save as PDF</button></div>
+    <div class="row" style="margin:6px 0 14px"><button class="btn" data-act="pdf">Create PDF</button><button class="btn ghost" data-act="print">Print</button><span id="pdfready"></span></div>
     ${who.length>1?`<div class="chips" style="margin:0 0 12px"><a class="chip" href="#shows/${id}/agenda" style="${!only?'background:var(--sec);color:var(--surface)':''}">Everyone</a>${who.map(p=>`<a class="chip" href="#shows/${id}/agenda-${p.id}" style="${only===p.id?'background:var(--sec);color:var(--surface)':''}">${esc(p.name)}</a>`).join('')}</div>`:''}
-    <p class="small muted">Prints on US Letter, landscape. On iPhone: Print, then pinch out on the preview to save or share it as a PDF.</p></div>
+    <p class="small muted">Create PDF makes a US Letter landscape PDF you can open, save to Files, send by email or print. Print uses the browser&#39;s print window (may not work inside the home-screen app on iPhone).</p></div>
   <div class="agenda">
     <div class="ag-head">${LOGO_SVG}<div><div class="ag-title">${esc(s.name)}</div>${only?`<div class="ag-title" style="font-size:16px">${esc(by('people',only)?.name||'')}</div>`:''}<div class="ag-sub">${esc(range(s.start_date,s.end_date))}${s.location?' · '+esc(s.location):''}</div></div><div class="ag-org">Torey Roderick Performance Horses</div></div>
     ${timing?`<table class="ag-tab"><thead><tr><th>Rider</th><th>Horses</th><th>Classes</th><th>First class</th><th>Last class</th></tr></thead><tbody>${timing}</tbody></table>`:''}
@@ -378,6 +380,39 @@ function classForm(showId,cid){
   <div class="two">${inp('time_note','Time note',c.time_note,'text','placeholder="Follows class 12"')}${inp('arena','Arena',c.arena)}</div>
   ${inp('sort_order','Order in the day',c.sort_order??0,'number')}
   <div class="row"><button class="btn">Save class</button>${cid!=='new'?`<button type="button" class="btn danger" data-act="del-class" data-id="${cid}" data-show="${showId}">Delete class</button>`:''}</div></form>`;
+}
+let PDF_FILE=null;
+function loadScript(src){return new Promise((ok,ko)=>{if(document.querySelector(`script[src="${src}"]`)) return ok();const el=document.createElement('script');el.src=src;el.onload=ok;el.onerror=()=>ko(new Error('Could not load the PDF tool. Check your connection.'));document.head.appendChild(el)})}
+async function makePdf(btn){
+  const src=document.querySelector('.agenda');if(!src) return;
+  btn.disabled=true;const old=btn.textContent;btn.textContent='Creating PDF…';
+  try{
+    await loadScript('html2canvas.min.js');
+    await loadScript('jspdf.umd.min.js');
+    const box=document.createElement('div');box.className='pdfmode';box.appendChild(src.cloneNode(true));document.body.appendChild(box);
+    const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',useCORS:true});box.remove();
+    const {jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'landscape',unit:'pt',format:'letter'});
+    const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=24,w=pw-2*m,h=ph-2*m;
+    const pxPerPt=canvas.width/w,sliceH=Math.floor(h*pxPerPt);
+    for(let y=0,i=0;y<canvas.height;y+=sliceH,i++){
+      const part=document.createElement('canvas');part.width=canvas.width;part.height=Math.min(sliceH,canvas.height-y);
+      part.getContext('2d').drawImage(canvas,0,y,canvas.width,part.height,0,0,canvas.width,part.height);
+      if(i) pdf.addPage();pdf.addImage(part.toDataURL('image/jpeg',0.92),'JPEG',m,m,w,part.height/pxPerPt);
+    }
+    const title=(document.querySelector('.agenda .ag-title')?.textContent||'Show agenda').replace(/[^A-Za-z0-9 _-]+/g,'').trim().replace(/ +/g,'_');
+    PDF_FILE=new File([pdf.output('blob')],`${title||'Show_agenda'}_agenda.pdf`,{type:'application/pdf'});
+    const slot=document.getElementById('pdfready');
+    if(slot) slot.innerHTML=`<button class="btn" data-act="pdf-share">Open / share PDF</button>`;
+    toast('PDF ready. Tap “Open / share PDF”.');
+  }catch(e){console.error(e);toast(e.message||'The PDF could not be created.')}
+  btn.disabled=false;btn.textContent=old;
+}
+async function sharePdf(){
+  if(!PDF_FILE) return;
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[PDF_FILE]})){await navigator.share({files:[PDF_FILE],title:PDF_FILE.name});return}
+  }catch(e){if(e.name==='AbortError') return}
+  const url=URL.createObjectURL(PDF_FILE);const a=document.createElement('a');a.href=url;a.download=PDF_FILE.name;a.target='_blank';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 function linkify(t){return esc(t).replace(/\b([\w.+-]+@[\w-]+\.[\w.]+)\b/g,'<a href="mailto:$1">$1</a>').replace(/(\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4})/g,m=>`<a href="tel:${m.replace(/[^\d]/g,'')}">${m}</a>`)}
 function horsesView(){
@@ -562,6 +597,8 @@ document.addEventListener('click',async ev=>{
   const act=a.dataset.act;
   try{
     if(act==='print'){window.print()}
+    else if(act==='pdf'){makePdf(a)}
+    else if(act==='pdf-share'){sharePdf()}
     else if(act==='signout'){await sb.auth.signOut();S.loginStep='email';render()}
     else if(act==='login-restart'){S.loginStep='email';render()}
     else if(act==='open') openFile(a.dataset.path);
