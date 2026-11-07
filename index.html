@@ -565,11 +565,14 @@ function applyUsual(form,onlyIfEmpty){
   const pid=form.querySelector('[name=shown_by]')?.value;const us=usualOf(pid);if(!us.length){if(!onlyIfEmpty) toast('No usual classes saved for this rider.');return}
   const boxes=[...form.querySelectorAll('input[name=class_ids]')];
   if(onlyIfEmpty&&(boxes.some(b=>b.checked)||form.querySelector('[name=classes]').value.trim())) return;
-  if(boxes.length){let n=0;boxes.forEach(b=>{if(us.some(u=>classMatch(u,b.dataset.name))){b.checked=true;n++}});
-    const missing=us.filter(u=>!boxes.some(b=>classMatch(u,b.dataset.name)));
+  const show=by('shows',form.dataset.show),h=by('horses',form.querySelector('[name=horse_id]')?.value);
+  const bad=(name,date)=>classIssues(name,date||show?.start_date,h,pid).length>0;let skip=0;
+  if(boxes.length){let n=0;boxes.forEach(b=>{if(us.some(u=>classMatch(u,b.dataset.name))){const c=by('classes',b.value);if(bad(b.dataset.name,c?.class_date)){skip++;return}b.checked=true;n++}});
+    const missing=us.filter(u=>!boxes.some(b=>classMatch(u,b.dataset.name))).filter(u=>bad(u)?(skip++,false):true);
     if(missing.length){const t=form.querySelector('[name=classes]');t.value=[t.value,...missing].filter(Boolean).join(', ')}
-    toast(n?`Ticked ${n} usual ${n===1?'class':'classes'}.`:'Usual classes added below.');}
-  else{const t=form.querySelector('[name=classes]');t.value=us.join(', ');toast('Usual classes filled in.')}
+    toast((n?`Ticked ${n} usual ${n===1?'class':'classes'}.`:'Usual classes added below.')+(skip?` Skipped ${skip} not eligible (level or age).`:''));}
+  else{const ok=us.filter(u=>bad(u)?(skip++,false):true);const t=form.querySelector('[name=classes]');t.value=ok.join(', ');toast('Usual classes filled in.'+(skip?` Skipped ${skip} not eligible (level or age).`:''))}
+  annotateEntry(form);
 }
 function horseForm(id){
   const h=id==='new'?{extra:{}}:by('horses',id);if(!h) return notFound();const x=h.extra||{};
