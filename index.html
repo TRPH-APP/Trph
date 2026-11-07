@@ -167,6 +167,7 @@ async function load(){
     const [shows,entries,horses,owners,people,documents,notes,classes]=await Promise.all([q('shows'),q('entries'),q('horses'),q('horse_owners'),q('people'),q('documents'),q('notes'),q('show_classes')]);
     for(const r of [shows,entries,horses,owners,people,documents,notes,classes]) if(r.error) throw r.error;
     S.data={shows:shows.data,entries:entries.data,horses:horses.data,owners:owners.data,people:people.data,documents:documents.data,notes:notes.data,classes:classes.data};
+    {const lv=await sb.from('allowed_levels').select('*');S.data.levels=lv.error?[]:lv.data}
     if(RW()){const m=await sb.from('members').select('*').order('email');S.data.members=m.data||[]}
     S.offline=false;
     try{localStorage.setItem('trph-cache',JSON.stringify({at:Date.now(),data:S.data}))}catch(e){}
@@ -176,6 +177,7 @@ async function load(){
     try{const c=JSON.parse(localStorage.getItem('trph-cache')||'null');if(c){S.data=c.data;S.offline=true}}catch(_){}
     if(!S.data) S.data={shows:[],entries:[],horses:[],owners:[],people:[],documents:[],notes:[],classes:[]};
     if(!S.data.classes) S.data.classes=[];
+    if(!S.data.levels) S.data.levels=[];
   }
   render();
 }
@@ -252,6 +254,8 @@ function alertsFor(show){
         if(card&&card.expires&&card.expires<end) out.push(`<span class="chip bad">${esc(by('people',pid)?.name||'')}: AQHA membership expires ${fmt(card.expires)}</span>`);
       });
     });
+    const ni=S.data.entries.filter(e=>e.show_id===show.id).reduce((n,e)=>n+entryIssues(e).length,0);
+    if(ni) out.push(`<span class="chip warn">${ni} ${ni===1?'class':'classes'} to check (level or age)</span>`);
     out.splice(0,out.length,...[...new Set(out)]);
   }
   return out.join('');
@@ -298,6 +302,64 @@ function classMatch(usual,billName){
   // L2 or L3 rider: same level, or the unlevelled class (open to L2 and L3)
   return b.lv.length?u.lv.some(l=>b.lv.includes(l)):true;
 }
+/* ---------- AQHA levels & Junior/Senior ---------- */
+const LEVELS=['L1','L2','L3'];
+function aqhaAge(h,date){if(!h?.foaled||!date) return null;return +date.slice(0,4)-+h.foaled.slice(0,4)}
+function ageGroup(h,date){const a=aqhaAge(h,date);return a==null?null:a<=5?'Junior':'Senior'}
+function parseCls(name){const k=classKey(name),t=k.base.split(' ').filter(Boolean);
+  return {toks:t,lv:k.lv.map(x=>x.toUpperCase()),age:t.includes('junior')?'Junior':t.includes('senior')?'Senior':null,
+    division:t.includes('select')?'Select':t.includes('amateur')?'Amateur':t.includes('youth')?'Youth':'Open'}}
+function levelRows(type,id){return (S.data.levels||[]).filter(r=>r.subject_type===type&&r.subject_id===id)}
+// problems for one class on one date, for a given horse and rider
+function classIssues(name,date,horse,riderId){
+  const out=[],c=parseCls(name),y=date?date.slice(0,4):'';
+  if(c.age&&horse&&date){const g=ageGroup(horse,date);if(g&&g!==c.age) out.push(`${horseName(horse)} is ${g} in ${y}`)}
+  if(c.lv.length&&date){
+    const type=c.division==='Open'?'horse':'person',sid=type==='horse'?horse?.id:riderId;
+    const who=type==='horse'?horseName(horse):(by('people',sid)?.name||'Rider');
+    const rows=sid?levelRows(type,sid).filter(r=>r.division===c.division&&classKey(r.class_name).base.split(' ').filter(Boolean).every(w=>c.toks.includes(w))):[];
+    if(rows.length){const ok=rows.filter(r=>!r.valid_until||r.valid_until>=date);
+      if(!ok.some(r=>c.lv.includes(r.level))){const ended=rows.filter(r=>c.lv.includes(r.level)&&r.valid_until&&r.valid_until<date).sort((a,b)=>b.valid_until.localeCompare(a.valid_until))[0];
+        out.push(ended?`${who}: ${ended.level} ended ${fmt(ended.valid_until)}`:`${who} not eligible ${c.lv.join('/')} (on file: ${[...new Set(ok.map(r=>r.level))].join(', ')||'none'})`)}}
+  }
+  return out;
+}
+function entryIssues(e){
+  const s=by('shows',e.show_id),h=by('horses',e.horse_id),out=[];if(!s) return out;
+  entryClasses(e).forEach(c=>classIssues(c.name,c.class_date||s.start_date,h,e.shown_by).forEach(m=>out.push({cls:c.name+(c.class_date?' ('+dayLbl(c.class_date)+')':''),m})));
+  (e.classes||[]).forEach(t=>classIssues(t,s.start_date,h,e.shown_by).forEach(m=>out.push({cls:t,m})));
+  return out;
+}
+function ageLine(h){
+  if(!h.foaled) return '';const y=new Date().getFullYear(),fy=+h.foaled.slice(0,4),a=y-fy;
+  return a<=5?`<b>Junior</b> in ${y} (${a} years AQHA) · Senior from ${fmt((fy+6)+'-01-01')}`:`<b>Senior</b> (${a} years AQHA in ${y})`;
+}
+function levelsSection(type,id){
+  const tab=type==='horse'?'horses':'people',rows=levelRows(type,id).sort((a,b)=>(a.division+a.class_name+a.level).localeCompare(b.division+b.class_name+b.level));
+  const h=type==='horse'?by('horses',id):null,al=h?ageLine(h):'';
+  if(!rows.length&&!al&&!RW()) return '';
+  return `<h2>AQHA levels</h2><div class="panel">${al?`<p class="small" style="margin:0 0 10px">${al} <span class="muted">(automatic)</span></p>`:''}
+  ${rows.length?rows.map(r=>{const end=r.valid_until&&days(r.valid_until)<0;return `<div class="cls"><div class="grow"><b>${esc(r.division)} ${esc(r.class_name)} · ${esc(r.level)}</b><div class="small muted">${r.valid_until?(end?'Ended ':'Until ')+fmt(r.valid_until):'No end date'}${r.notes?' · '+esc(r.notes):''}</div></div>${end?'<span class="chip">Ended</span>':''}${RW()?`<button class="btn ghost small" data-go="${tab}/${id}/level-${r.id}">Edit</button>`:''}</div>`}).join(''):`<p class="small muted" style="margin:0">${type==='horse'?'No levels yet for Open classes.':'No levels yet for Select or Amateur classes.'}</p>`}</div>
+  ${RW()?`<div class="row" style="margin-top:10px"><button class="btn small" data-go="${tab}/${id}/level-new">Add level</button></div>`:''}`;
+}
+function levelForm(tab,sid,lid){
+  const type=tab==='horses'?'horse':'person';
+  const r=lid==='new'?{division:type==='horse'?'Open':'Select',level:'L2'}:(S.data.levels||[]).find(x=>x.id===lid);if(!r) return notFound();
+  const subj=type==='horse'?horseName(by('horses',sid)):by('people',sid)?.name;
+  return `<button class="back" data-go="${tab}/${sid}">Cancel</button><h1>${lid==='new'?'Add level':'Edit level'}</h1><p class="muted">${esc(subj||'')}</p>
+  <p class="small muted">${type==='horse'?'Horses carry their levels for Open classes.':'Riders carry their levels for Select and Amateur classes.'} One line per level. When a level stops, set its end date: classes after that date will be flagged.</p>
+  <form class="f" data-form="level" data-type="${type}" data-sid="${sid}" data-id="${lid}" data-tab="${tab}">
+  <div class="two">${sel('division','Division',type==='horse'?['Open']:['Select','Amateur','Youth'],r.division,false)}${inp('class_name','Class (without level)',r.class_name,'text','required placeholder="Trail"')}</div>
+  <div class="two">${sel('level','Level',LEVELS,r.level,false)}${inp('valid_until','Eligible until (optional)',r.valid_until,'date')}</div>${ta('notes','Notes',r.notes)}
+  <div class="row"><button class="btn">Save level</button>${lid!=='new'?`<button type="button" class="btn danger" data-act="del-level" data-id="${lid}" data-back="${tab}/${sid}">Delete level</button>`:''}</div></form>`;
+}
+function annotateEntry(form){
+  const s=by('shows',form.dataset.show),h=by('horses',form.querySelector('[name=horse_id]')?.value),rid=form.querySelector('[name=shown_by]')?.value||null;
+  form.querySelectorAll('input[name=class_ids]').forEach(b=>{const c=by('classes',b.value),lab=b.closest('label');if(!c||!lab) return;
+    const iss=classIssues(c.name,c.class_date||s?.start_date,h,rid);let n=lab.querySelector('.lvl');
+    if(!n){n=document.createElement('span');n.className='lvl chip warn';lab.appendChild(n)}
+    n.textContent=iss.join(' · ');n.hidden=!iss.length;lab.style.opacity=iss.length?'.6':''});
+}
 function pagesOf(d){const out=[];if(d.file_path) out.push({path:d.file_path,name:d.file_name,type:d.content_type});(d.more_files||[]).forEach(f=>f&&f.path&&out.push(f));return out}
 function latestDoc(type,id,kind){return S.data.documents.filter(d=>d.subject_type===type&&d.subject_id===id&&d.kind===kind).sort((a,b)=>(b.doc_date||'').localeCompare(a.doc_date||''))[0]}
 function showsView(){
@@ -321,7 +383,7 @@ function showDetail(id){
   <h2>Entries</h2>
   ${ents.length?`<div class="panel">${ents.map(e=>{const h=by('horses',e.horse_id),r=by('people',e.shown_by),o=by('people',e.owner_id),ec=entryClasses(e);return `<div class="entry"><div class="row" style="justify-content:space-between"><a href="#horses/${e.horse_id}"><strong>${esc(horseName(h))}</strong></a>${RW()?`<button class="btn ghost small" data-go="shows/${id}/entry-${e.id}">Edit</button>`:''}</div>
     <div class="small muted">Shown by ${r?`<a href="#people/${r.id}">${esc(r.name)}</a>`:'not set'}${o?` for ${`<a href="#people/${o.id}">${esc(o.name)}</a>`}`:''}</div>
-    <div class="chips">${ec.map(c=>`<span class="chip">${esc(classLbl(c))}${c.class_date?' · '+esc(dayLbl(c.class_date)):''}</span>`).join('')}${(e.classes||[]).map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div>${timingHtml(ec)}${e.notes?`<div class="small">${esc(e.notes)}</div>`:''}</div>`}).join('')}</div>`:`<div class="empty">No entries yet.</div>`}
+    <div class="chips">${ec.map(c=>`<span class="chip">${esc(classLbl(c))}${c.class_date?' · '+esc(dayLbl(c.class_date)):''}</span>`).join('')}${(e.classes||[]).map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div>${timingHtml(ec)}${(()=>{const is=entryIssues(e);return is.length?`<div class="chips">${is.map(x=>`<span class="chip warn">Check ${esc(x.cls)}: ${esc(x.m)}</span>`).join('')}</div>`:''})()}${e.notes?`<div class="small">${esc(e.notes)}</div>`:''}</div>`}).join('')}</div>`:`<div class="empty">No entries yet.</div>`}
   ${RW()?`<div class="row" style="margin-top:10px"><button class="btn small" data-go="shows/${id}/entry-new">Add entry</button></div>`:''}
   ${ridersSection(id)}${scheduleSection(id)}
   ${docsSection('show',id)}${notesSection('show',id)}`;
@@ -431,7 +493,7 @@ function horseDetail(id){
   ${RW()?`<div class="row" style="margin:14px 0"><button class="btn ghost small" data-go="horses/${id}/edit">Edit horse</button></div>`:''}
   <div class="panel"><dl class="kv">${kv.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${h.notes?`<p class="small" style="margin:12px 0 0">${esc(h.notes)}</p>`:''}</div>
   <h2>Upcoming shows</h2>${shows.length?`<div class="list">${shows.map(({e,s})=>`<button class="item" data-go="shows/${s.id}"><div class="grow"><div class="t">${esc(s.name)}</div><div class="s">${esc(range(s.start_date,s.end_date))}</div><div class="chips">${(e.classes||[]).map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div></div></button>`).join('')}</div>`:`<div class="empty">Not entered in any upcoming show.</div>`}
-  ${docsSection('horse',id)}${notesSection('horse',id)}`;
+  ${levelsSection('horse',id)}${docsSection('horse',id)}${notesSection('horse',id)}`;
 }
 function peopleView(){
   const ps=[...S.data.people].sort((a,b)=>a.name.localeCompare(b.name));
@@ -448,7 +510,7 @@ function personDetail(id){
   <div class="panel"><dl class="kv">${kv.map(([k,v])=>`<dt>${k}</dt><dd>${k==='Rider category'||k==='AQHA'||k==='NSBA'?esc(v):v}</dd>`).join('')}</dl>${p.notes?`<p class="small" style="margin:12px 0 0">${esc(p.notes)}</p>`:''}</div>
   ${hs.length?`<h2>Horses owned</h2><div class="list">${hs.map(h=>`<button class="item" data-go="horses/${h.id}"><div class="grow"><div class="t">${esc(horseName(h))}</div><div class="s">${esc(h.registered_name)}</div></div></button>`).join('')}</div>`:''}
   ${rides.length?`<h2>Riding at upcoming shows</h2><div class="list">${rides.map(({e,s})=>`<button class="item" data-go="shows/${s.id}"><div class="grow"><div class="t">${esc(s.name)}</div><div class="s">${esc(horseName(by('horses',e.horse_id)))}, ${esc(range(s.start_date,s.end_date))}</div>${timingHtml(entryClasses(e))}</div></button>`).join('')}</div>`:''}
-  ${docsSection('person',id)}${notesSection('person',id)}`;
+  ${levelsSection('person',id)}${docsSection('person',id)}${notesSection('person',id)}`;
 }
 function docsSection(type,id){
   const ds=S.data.documents.filter(d=>d.subject_type===type&&d.subject_id===id).sort((a,b)=>(b.doc_date||'').localeCompare(a.doc_date||''));
@@ -578,8 +640,8 @@ function render(){
   document.body.className='sec-'+(['shows','horses','people','members'].includes(r.tab)?r.tab:'shows');
   let body;
   if(r.tab==='shows') body=!r.id?showsView():r.sub==='edit'?showForm(r.id):r.sub==='agenda'||r.sub?.startsWith('agenda-')?agendaView(r.id,r.sub.slice(7)||null):r.sub?.startsWith('entry-')?entryForm(r.id,r.sub.slice(6)):r.sub?.startsWith('class-')?classForm(r.id,r.sub.slice(6)):r.sub?.startsWith('doc-')?docForm('shows',r.id,r.sub.slice(4)):showDetail(r.id);
-  else if(r.tab==='horses') body=!r.id?horsesView():r.sub==='edit'?horseForm(r.id):r.sub?.startsWith('doc-')?docForm('horses',r.id,r.sub.slice(4)):horseDetail(r.id);
-  else if(r.tab==='people') body=!r.id?peopleView():r.sub==='edit'?personForm(r.id):r.sub?.startsWith('doc-')?docForm('people',r.id,r.sub.slice(4)):personDetail(r.id);
+  else if(r.tab==='horses') body=!r.id?horsesView():r.sub==='edit'?horseForm(r.id):r.sub?.startsWith('doc-')?docForm('horses',r.id,r.sub.slice(4)):r.sub?.startsWith('level-')?levelForm('horses',r.id,r.sub.slice(6)):horseDetail(r.id);
+  else if(r.tab==='people') body=!r.id?peopleView():r.sub==='edit'?personForm(r.id):r.sub?.startsWith('doc-')?docForm('people',r.id,r.sub.slice(4)):r.sub?.startsWith('level-')?levelForm('people',r.id,r.sub.slice(6)):personDetail(r.id);
   else if(r.tab==='members') body=membersView();
   else body=notFound();
   const pend=legacyPending();
@@ -588,6 +650,7 @@ function render(){
   <main>${S.offline?`<div class="banner">You are offline. This is the last saved copy${RW()?'; changes can’t be saved until you reconnect':''}.</div>`:''}
   ${pend&&!r.sub?`<div class="banner"><p style="margin:0 0 8px">${pend} ${pend===1?'file':'files'} from the old TRPH app (papers and horse photos) are ready to move here.</p><button class="btn small" data-act="import">Move files</button></div>`:''}${body}</main>
   <nav class="tabs" aria-label="Sections">${tabs.map(([k,l])=>`<a href="#${k}" aria-current="${r.tab===k?'page':'false'}">${l}</a>`).join('')}</nav>`;
+  const ef=app.querySelector('form[data-form=entry]');if(ef) annotateEntry(ef);
 }
 
 /* ---------- events ---------- */
@@ -603,6 +666,7 @@ document.addEventListener('click',async ev=>{
     else if(act==='login-restart'){S.loginStep='email';render()}
     else if(act==='open') openFile(a.dataset.path);
     else if(act==='import') runImport(a);
+    else if(act==='del-level'){if(confirm('Delete this level?')){await del('allowed_levels',a.dataset.id);toast('Level deleted');go(a.dataset.back);await load()}}
     else if(act==='del-note'){if(confirm('Delete this note?')){await del('notes',a.dataset.id);toast('Note deleted');await load()}}
     else if(act==='usual'){applyUsual(a.closest('form'),false)}
     else if(act==='del-class'){if(confirm('Delete this class? It will be removed from all entries.')){await del('show_classes',a.dataset.id);const left=S.data.entries.filter(e=>(e.class_ids||[]).includes(a.dataset.id));for(const e of left){await save('entries',e.id,{class_ids:e.class_ids.filter(x=>x!==a.dataset.id)})}toast('Class deleted');go('shows/'+a.dataset.show);await load()}}
@@ -614,7 +678,8 @@ document.addEventListener('click',async ev=>{
     else if(act==='del-member'){if(confirm('Remove '+a.dataset.email+' from TRPH?')){const r=await sb.from('members').delete().eq('email',a.dataset.email);if(r.error) throw r.error;toast('Member removed');await load()}}
   }catch(e){console.error(e);toast('That didn’t work: '+(e.message||e))}
 });
-document.addEventListener('change',ev=>{const s=ev.target.closest('form[data-form=entry] select[name=shown_by]');if(s&&s.closest('form').dataset.id==='new') applyUsual(s.closest('form'),true)});
+document.addEventListener('change',ev=>{const s=ev.target.closest('form[data-form=entry] select[name=shown_by]');if(s&&s.closest('form').dataset.id==='new') applyUsual(s.closest('form'),true);
+  const f=ev.target.closest('form[data-form=entry]');if(f&&ev.target.matches('select')) annotateEntry(f)});
 document.addEventListener('change',async ev=>{
   const s=ev.target.closest('select[data-act="role"]');if(!s) return;
   const r=await sb.from('members').update({role:s.value}).eq('email',s.dataset.email);
@@ -648,6 +713,8 @@ document.addEventListener('submit',async ev=>{
         await save('show_classes',id==='new'?null:id,row);toast('Class saved');go('shows/'+f.dataset.show);await load();return}
       case 'person':{const id=f.dataset.id,old=id==='new'?{}:by('people',id);const row={name:v('name'),rider_category:v('rider_category'),aqha_number:v('aqha_number'),nsba_number:v('nsba_number'),phone:v('phone'),email:v('email'),address:v('address'),notes:v('notes'),extra:{...(old.extra||{}),usual_classes:(v('usual_classes')||'').split(',').map(x=>x.trim()).filter(Boolean)}};
         const p=await save('people',id==='new'?null:id,row);toast('Saved');go('people/'+p.id);await load();return}
+      case 'level':{const id=f.dataset.id;const row={subject_type:f.dataset.type,subject_id:f.dataset.sid,division:v('division'),class_name:v('class_name'),level:v('level'),valid_until:v('valid_until'),notes:v('notes'),updated_at:new Date().toISOString()};
+        await save('allowed_levels',id==='new'?null:id,row);toast('Level saved');go(f.dataset.tab+'/'+f.dataset.sid);await load();return}
       case 'doc':{const id=f.dataset.id,old=id==='new'?{}:by('documents',id);
         const row={subject_type:f.dataset.type,subject_id:f.dataset.sid,kind:v('kind'),title:v('title'),doc_date:v('doc_date'),expires:v('expires'),notes:v('notes')};
         const removed=fd.getAll('remove');let pages=pagesOf(old).filter(x=>!removed.includes(x.path));
