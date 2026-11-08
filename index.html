@@ -260,6 +260,8 @@ function alertsFor(show){
       [e.owner_id,e.shown_by].filter((v,i,a)=>v&&a.indexOf(v)===i).forEach(pid=>{
         const card=latestDoc('person',pid,'AQHA membership card');
         if(card&&card.expires&&card.expires<end) out.push(`<span class="chip bad">${esc(by('people',pid)?.name||'')}: AQHA membership expires ${fmt(card.expires)}</span>`);
+        const ns=latestDoc('person',pid,'NSBA membership card');
+        if(ns&&ns.expires&&ns.expires<end) out.push(`<span class="chip bad">${esc(by('people',pid)?.name||'')}: NSBA membership expires ${fmt(ns.expires)}</span>`);
       });
     });
     const ni=S.data.entries.filter(e=>e.show_id===show.id).reduce((n,e)=>n+entryIssues(e).length,0);
