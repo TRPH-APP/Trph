@@ -79,6 +79,14 @@ label.l textarea{min-height:88px}
 @media (max-width:420px){.two{grid-template-columns:1fr}}
 .banner{border-radius:12px;padding:12px 14px;margin:0 0 14px;background:var(--soft);border:1px solid var(--line)}
 .banner.bad{background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.guides{display:grid;grid-template-columns:1fr;gap:10px;margin:4px 0 18px}
+@media (min-width:560px){.guides{grid-template-columns:1fr 1fr}}
+.gtile{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--gc,var(--sec));border-radius:14px;padding:12px 14px}
+.gtile .gt{font-weight:750;font-size:17px;margin-bottom:2px}
+.gtile .gs{font-size:14px;color:var(--muted);margin-bottom:8px}
+.gtile a.glink{display:flex;align-items:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink);font-weight:600;border-top:1px solid var(--line);padding:6px 0}
+.gtile a.glink:first-of-type{border-top:0}
+.gtile a.glink span.arr{margin-left:auto;color:var(--sec)}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
 nav.tabs a{flex:1;text-align:center;padding:10px 4px 12px;text-decoration:none;color:var(--muted);font-weight:650;font-size:14px;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 nav.tabs a[aria-current="page"]{color:var(--ink)}
@@ -362,11 +370,16 @@ function annotateEntry(form){
 }
 function pagesOf(d){const out=[];if(d.file_path) out.push({path:d.file_path,name:d.file_name,type:d.content_type});(d.more_files||[]).forEach(f=>f&&f.path&&out.push(f));return out}
 function latestDoc(type,id,kind){return S.data.documents.filter(d=>d.subject_type===type&&d.subject_id===id&&d.kind===kind).sort((a,b)=>(b.doc_date||'').localeCompare(a.doc_date||''))[0]}
+function guidesTiles(){
+  const L=(href,ico,txt)=>`<a class="glink" href="${href}" target="_blank" rel="noopener">${ico} ${txt}<span class="arr">→</span></a>`;
+  return `<div class="guides"><div class="gtile" style="--gc:#2F7A4E"><div class="gt">👋 Getting started</div><div class="gs">For everyone: install, agenda, papers</div>${L('guides/TRPH_Riders_guide_EN.pdf','📘',"Riders' guide")}${L('guides/TRPH_Rider_Horse_Profile_EN.pdf','🧾','Rider &amp; horse profile (what to send)')}</div>
+  ${RW()?`<div class="gtile" style="--gc:#7A3FB0"><div class="gt">🛠️ Editor guide</div><div class="gs">For Torey, Sara &amp; Marie-France</div>${L('guides/TRPH_Quick_guide_EN.pdf','📗',"Editors' quick guide")}</div>`:''}</div>`;
+}
 function showsView(){
   const all=[...S.data.shows].sort((a,b)=>(a.start_date||'9999').localeCompare(b.start_date||'9999'));
   const up=all.filter(s=>!s.start_date||days(s.end_date||s.start_date)>=0), past=all.filter(s=>!up.includes(s)).reverse();
   const item=s=>{const n=S.data.entries.filter(e=>e.show_id===s.id).length;return `<button class="item" data-go="shows/${s.id}"><div class="grow"><div class="t">${esc(s.name)}</div><div class="s">${esc(range(s.start_date,s.end_date))}${s.location?'<br>'+esc(s.location):''}</div><div class="chips"><span class="chip">${n} ${n===1?'entry':'entries'}</span>${alertsFor(s)}</div></div></button>`};
-  return `<h1>Shows</h1>${RW()?`<div class="row" style="margin:8px 0 16px"><button class="btn" data-go="shows/new/edit">Add show</button></div>`:''}
+  return `<h1>Shows</h1>${guidesTiles()}${RW()?`<div class="row" style="margin:8px 0 16px"><button class="btn" data-go="shows/new/edit">Add show</button></div>`:''}
   ${up.length?`<div class="list">${up.map(item).join('')}</div>`:`<div class="empty">No upcoming shows.${RW()?' Add the next one with Add show.':''}</div>`}
   ${past.length?`<details class="past"><summary>Past shows (${past.length})</summary><div class="list">${past.map(item).join('')}</div></details>`:''}`;
 }
