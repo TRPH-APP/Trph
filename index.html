@@ -370,10 +370,17 @@ function annotateEntry(form){
 }
 function pagesOf(d){const out=[];if(d.file_path) out.push({path:d.file_path,name:d.file_name,type:d.content_type});(d.more_files||[]).forEach(f=>f&&f.path&&out.push(f));return out}
 function latestDoc(type,id,kind){return S.data.documents.filter(d=>d.subject_type===type&&d.subject_id===id&&d.kind===kind).sort((a,b)=>(b.doc_date||'').localeCompare(a.doc_date||''))[0]}
+const GUIDES={riders:{t:"Riders' guide",f:'TRPH_Riders_guide_EN',ico:'📘'},profile:{t:'Rider & horse profile',f:'TRPH_Rider_Horse_Profile_EN',ico:'🧾'},editors:{t:"Editors' quick guide",f:'TRPH_Quick_guide_EN',ico:'📗',rw:true}};
 function guidesTiles(){
-  const L=(href,ico,txt)=>`<a class="glink" href="${href}" target="_blank" rel="noopener">${ico} ${txt}<span class="arr">→</span></a>`;
-  return `<div class="guides"><div class="gtile" style="--gc:#2F7A4E"><div class="gt">👋 Getting started</div><div class="gs">For everyone: install, agenda, papers</div>${L('guides/TRPH_Riders_guide_EN.pdf','📘',"Riders' guide")}${L('guides/TRPH_Rider_Horse_Profile_EN.pdf','🧾','Rider &amp; horse profile (what to send)')}</div>
-  ${RW()?`<div class="gtile" style="--gc:#7A3FB0"><div class="gt">🛠️ Editor guide</div><div class="gs">For Torey, Sara &amp; Marie-France</div>${L('guides/TRPH_Quick_guide_EN.pdf','📗',"Editors' quick guide")}</div>`:''}</div>`;
+  const L=(k,txt)=>`<a class="glink" href="#guide/${k}">${GUIDES[k].ico} ${txt}<span class="arr">→</span></a>`;
+  return `<div class="guides"><div class="gtile" style="--gc:#2F7A4E"><div class="gt">👋 Getting started</div><div class="gs">For everyone: install, agenda, papers</div>${L('riders',"Riders' guide")}${L('profile','Rider &amp; horse profile (what to send)')}</div>
+  ${RW()?`<div class="gtile" style="--gc:#7A3FB0"><div class="gt">🛠️ Editor guide</div><div class="gs">For Torey, Sara &amp; Marie-France</div>${L('editors',"Editors' quick guide")}</div>`:''}</div>`;
+}
+function guideView(k){
+  const g=GUIDES[k];if(!g||(g.rw&&!RW())) return notFound();
+  return `<div class="row" style="justify-content:space-between;margin:0 0 10px"><button class="btn" data-go="shows">← Back to TRPH</button><button class="btn ghost" data-act="guide-share" data-k="${k}">📤 Save / share PDF</button></div>
+  <h1>${g.ico} ${esc(g.t)}</h1><img src="guides/${g.f}.png" alt="${esc(g.t)}" style="width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:#fff">
+  <div class="row" style="margin-top:12px"><button class="btn" data-go="shows">← Back to TRPH</button></div>`;
 }
 function showsView(){
   const all=[...S.data.shows].sort((a,b)=>(a.start_date||'9999').localeCompare(b.start_date||'9999'));
@@ -659,6 +666,7 @@ function render(){
   else if(r.tab==='horses') body=!r.id?horsesView():r.sub==='edit'?horseForm(r.id):r.sub?.startsWith('doc-')?docForm('horses',r.id,r.sub.slice(4)):r.sub?.startsWith('level-')?levelForm('horses',r.id,r.sub.slice(6)):horseDetail(r.id);
   else if(r.tab==='people') body=!r.id?peopleView():r.sub==='edit'?personForm(r.id):r.sub?.startsWith('doc-')?docForm('people',r.id,r.sub.slice(4)):r.sub?.startsWith('level-')?levelForm('people',r.id,r.sub.slice(6)):personDetail(r.id);
   else if(r.tab==='members') body=membersView();
+  else if(r.tab==='guide') body=guideView(r.id);
   else body=notFound();
   const pend=legacyPending();
   const tabs=[['shows','Shows'],['horses','Horses'],['people','Owners']].concat(RW()?[['members','Members']]:[]);
@@ -677,6 +685,9 @@ document.addEventListener('click',async ev=>{
   try{
     if(act==='print'){window.print()}
     else if(act==='pdf'){makePdf(a)}
+    else if(act==='guide-share'){const g=GUIDES[a.dataset.k];const res=await fetch('guides/'+g.f+'.pdf');const file=new File([await res.blob()],g.f+'.pdf',{type:'application/pdf'});
+      try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:g.t});return}}catch(e){if(e.name==='AbortError') return}
+      const u=URL.createObjectURL(file);const l=document.createElement('a');l.href=u;l.download=file.name;document.body.appendChild(l);l.click();l.remove();}
     else if(act==='pdf-share'){sharePdf()}
     else if(act==='signout'){await sb.auth.signOut();S.loginStep='email';render()}
     else if(act==='login-restart'){S.loginStep='email';render()}
