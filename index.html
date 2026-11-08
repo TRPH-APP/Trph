@@ -373,7 +373,7 @@ function latestDoc(type,id,kind){return S.data.documents.filter(d=>d.subject_typ
 const GUIDES={riders:{t:"Riders' guide",f:'TRPH_Riders_guide_EN',ico:'📘'},profile:{t:'Rider & horse profile',f:'TRPH_Rider_Horse_Profile_EN',ico:'🧾'},editors:{t:"Editors' quick guide",f:'TRPH_Quick_guide_EN',ico:'📗',rw:true}};
 function guidesTiles(){
   const L=(k,txt)=>`<a class="glink" href="#guide/${k}">${GUIDES[k].ico} ${txt}<span class="arr">→</span></a>`;
-  return `<div class="guides"><div class="gtile" style="--gc:#2F7A4E"><div class="gt">👋 Getting started</div><div class="gs">For everyone: install, agenda, papers</div>${L('riders',"Riders' guide")}${L('profile','Rider &amp; horse profile (what to send)')}</div>
+  return `<div class="guides"><div class="gtile" style="--gc:#2F7A4E"><div class="gt">👋 Getting started</div><div class="gs">For everyone: install, agenda, papers</div>${L('riders',"Riders' guide")}${L('profile','Rider &amp; horse profile (what to send)')}<a class="glink" href="mailto:trphapp@gmail.com?subject=TRPH%20papers">📩 Email papers to trphapp@gmail.com<span class="arr">→</span></a></div>
   ${RW()?`<div class="gtile" style="--gc:#7A3FB0"><div class="gt">🛠️ Editor guide</div><div class="gs">For Torey, Sara &amp; Marie-France</div>${L('editors',"Editors' quick guide")}</div>`:''}</div>`;
 }
 function guideView(k){
