@@ -87,6 +87,11 @@ label.l textarea{min-height:88px}
 .gtile a.glink{display:flex;align-items:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink);font-weight:600;border-top:1px solid var(--line);padding:6px 0}
 .gtile a.glink:first-of-type{border-top:0}
 .gtile a.glink span.arr{margin-left:auto;color:var(--sec)}
+.install{border:2px solid #2456C7;background:#E4ECFA;color:#1d1d1f;border-radius:14px;padding:12px 14px;margin:0 0 16px}
+.install b.h{display:block;font-size:17px;margin-bottom:6px}
+.install ol{margin:6px 0 8px;padding-left:22px}.install li{margin:5px 0;font-size:15px}
+.install .k{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:26px;border-radius:7px;background:#fff;border:1px solid #c9d6f2;font-weight:700;padding:0 6px}
+.install .x{background:none;border:0;color:#2456C7;font-weight:650;padding:6px 0;min-height:36px;cursor:pointer}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
 nav.tabs a{flex:1;text-align:center;padding:10px 4px 12px;text-decoration:none;color:var(--muted);font-weight:650;font-size:14px;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 nav.tabs a[aria-current="page"]{color:var(--ink)}
@@ -235,12 +240,23 @@ async function afterLogin(){
   S.loading=false;
   if(S.role) await load(); else render();
 }
+function isStandalone(){return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches}
+let INSTALL_EVT=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();INSTALL_EVT=e;if(S.session) render()});
+function installBanner(force){
+  if(isStandalone()) return '';
+  try{if(!force&&localStorage.getItem('trph-install-hide')==='1') return ''}catch(e){}
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const body=INSTALL_EVT?`<p style="margin:4px 0 8px">Get TRPH as an app on your phone, with its own icon.</p><button class="btn small" data-act="install-now">📲 Install TRPH</button>`
+   :ios?`<ol><li>Tap the <span class="k">⬆️</span> <b>Share</b> button (bottom of Safari, or top right on iPad).</li><li>Scroll down and tap <span class="k">➕</span> <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>. Then open TRPH from the new icon and sign in there.</li></ol>`
+   :`<ol><li>Open your browser menu <span class="k">⋮</span>.</li><li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li><li>Open TRPH from the new icon and sign in there.</li></ol>`;
+  return `<div class="install" role="note"><b class="h">📲 Make TRPH an app on your phone</b>${body}<button class="x" data-act="install-hide">Not now</button></div>`;
+}
 function loginView(){
   if(S.loginStep==='code') return `<div class="login">${LOGO_SVG}<div class="brand">TRPH</div>
   <p>We sent a 6-digit code to <strong>${esc(S.loginEmail)}</strong>. Enter it below. It can take a minute to arrive; check your spam folder too.</p>
   <form class="f" data-form="code"><label class="l">Code<input class="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" required maxlength="8"></label>
   <button class="btn">Sign in</button><button type="button" class="back" data-act="login-restart">Use another email</button></form></div>`;
-  return `<div class="login">${LOGO_SVG}<div class="brand">TRPH</div>
+  return `<div class="login">${LOGO_SVG}<div class="brand">TRPH</div>${installBanner(false)}
   <p class="muted">Show schedule, horses and papers for Torey Roderick Performance Horses.</p>
   <form class="f" data-form="email"><label class="l">Your email<input name="email" type="email" autocomplete="email" required></label>
   <button class="btn">Email me a sign-in code</button></form>
@@ -673,7 +689,7 @@ function render(){
   const pend=legacyPending();
   const tabs=[['shows','Shows'],['horses','Horses'],['people','Owners']].concat(RW()?[['members','Members']]:[]);
   app.innerHTML=`<header class="top">${LOGO_SVG}<span class="brand">TRPH</span><span class="sp"></span><span class="who">${esc(S.session.user.email)}<br>${RW()?'Editor':'Reader'}</span><button class="btn ghost small" data-act="signout">Sign out</button></header>
-  <main>${S.offline?`<div class="banner">You are offline. This is the last saved copy${RW()?'; changes can’t be saved until you reconnect':''}.</div>`:''}
+  <main>${installBanner(false)}${S.offline?`<div class="banner">You are offline. This is the last saved copy${RW()?'; changes can’t be saved until you reconnect':''}.</div>`:''}
   ${pend&&!r.sub?`<div class="banner"><p style="margin:0 0 8px">${pend} ${pend===1?'file':'files'} from the old TRPH app (papers and horse photos) are ready to move here.</p><button class="btn small" data-act="import">Move files</button></div>`:''}${body}</main>
   <nav class="tabs" aria-label="Sections">${tabs.map(([k,l])=>`<a href="#${k}" aria-current="${r.tab===k?'page':'false'}">${l}</a>`).join('')}</nav>`;
   const ef=app.querySelector('form[data-form=entry]');if(ef) annotateEntry(ef);
@@ -685,6 +701,8 @@ document.addEventListener('click',async ev=>{
   const a=ev.target.closest('[data-act]');if(!a||a.tagName==='SELECT') return;
   const act=a.dataset.act;
   try{
+    if(act==='install-hide'){try{localStorage.setItem('trph-install-hide','1')}catch(e){};render();return}
+    if(act==='install-now'){if(INSTALL_EVT){INSTALL_EVT.prompt();INSTALL_EVT=null;render()}return}
     if(act==='print'){window.print()}
     else if(act==='pdf'){makePdf(a)}
     else if(act==='guide-share'){const g=GUIDES[a.dataset.k];const res=await fetch('guides/'+g.f+'.pdf');const file=new File([await res.blob()],g.f+'.pdf',{type:'application/pdf'});
