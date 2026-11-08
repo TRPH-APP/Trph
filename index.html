@@ -743,6 +743,7 @@ document.addEventListener('submit',async ev=>{
       case 'level':{const id=f.dataset.id;const row={subject_type:f.dataset.type,subject_id:f.dataset.sid,division:v('division'),class_name:v('class_name'),level:v('level'),valid_until:v('valid_until'),notes:v('notes'),updated_at:new Date().toISOString()};
         await save('allowed_levels',id==='new'?null:id,row);toast('Level saved');go(f.dataset.tab+'/'+f.dataset.sid);await load();return}
       case 'doc':{const id=f.dataset.id,old=id==='new'?{}:by('documents',id);
+        if(v('kind')==='NSBA membership card'&&!v('expires')){const y=(v('doc_date')||today()).slice(0,4);fd.set('expires',y+'-12-31')}
         const row={subject_type:f.dataset.type,subject_id:f.dataset.sid,kind:v('kind'),title:v('title'),doc_date:v('doc_date'),expires:v('expires'),notes:v('notes')};
         const removed=fd.getAll('remove');let pages=pagesOf(old).filter(x=>!removed.includes(x.path));
         for(const file of fd.getAll('file')){if(!file||!file.size) continue;if(file.size>20*1024*1024) throw new Error('Files must be under 20 MB.');
