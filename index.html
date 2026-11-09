@@ -570,7 +570,7 @@ function inviteHref(m){
   let b=`Hi${first?' '+first:''}!\n\nYou're set up in the TRPH app, the TR Performance Horses show book: your shows, classes, horses and papers in one place.\n\nTo get it on your phone:\n1. Open Safari (on iPhone) and go to: ${base}\n2. Tap the Share button, then "Add to Home Screen".\n3. Open the new TRPH icon, enter this email address (${m.email}), then the 6-digit code you receive. No password. No code? Check your spam folder.\n\nShort guides:\n- Riders' guide: ${g('TRPH_Riders_guide_EN')}\n- Rider & horse profile (papers to send): ${g('TRPH_Rider_Horse_Profile_EN')}\n`;
   if(m.role==='editor') b+=`- Editors' quick guide: ${g('TRPH_Quick_guide_EN')}\n`;
   b+=`\nPapers and photos go to trphapp@gmail.com. Questions? Torey, Sara or Murph.\n\nSee you at the show!`;
-  return 'mailto:'+encodeURIComponent(m.email)+'?subject='+encodeURIComponent('Welcome to the TRPH app 🐎')+'&body='+encodeURIComponent(b);
+  return 'googlegmail:///co?to='+encodeURIComponent(m.email)+'&subject='+encodeURIComponent('Welcome to the TRPH app 🐎')+'&body='+encodeURIComponent(b);
 }
 function membersView(){
   if(!RW()) return notFound();
