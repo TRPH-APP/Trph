@@ -563,15 +563,23 @@ function notesSection(type,id){
   return `<h2>Notes</h2>${ns.map(n=>`<div class="panel" style="margin-bottom:8px"><div>${esc(n.text)}</div><div class="row small muted" style="justify-content:space-between;margin-top:6px"><span>${new Date(n.created_at).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</span>${RW()?`<button class="back small" data-act="del-note" data-id="${n.id}" style="color:var(--bad)">Delete</button>`:''}</div></div>`).join('')}
   ${RW()?`<form class="f" data-form="note" data-type="${type}" data-id="${id}"><label class="l">Add a note<textarea name="text" required></textarea></label><div><button class="btn small">Save note</button></div></form>`:''}`;
 }
+function inviteHref(m){
+  const base='https://trph-app.github.io/Trph/',g=f=>base+'guides/'+f+'.pdf';
+  const first=(m.display_name||'').split(/[ &]/)[0];
+  let b=`Hi${first?' '+first:''}!\n\nYou're set up in the TRPH app, the TR Performance Horses show book: your shows, classes, horses and papers in one place.\n\nTo get it on your phone:\n1. Open Safari (on iPhone) and go to: ${base}\n2. Tap the Share button, then "Add to Home Screen".\n3. Open the new TRPH icon, enter this email address (${m.email}), then the 6-digit code you receive. No password. No code? Check your spam folder.\n\nShort guides:\n- Riders' guide: ${g('TRPH_Riders_guide_EN')}\n- Rider & horse profile (papers to send): ${g('TRPH_Rider_Horse_Profile_EN')}\n`;
+  if(m.role==='editor') b+=`- Editors' quick guide: ${g('TRPH_Quick_guide_EN')}\n`;
+  b+=`\nPapers and photos go to trphapp@gmail.com. Questions? Torey, Sara or Murph.\n\nSee you at the show!`;
+  return 'mailto:'+encodeURIComponent(m.email)+'?subject='+encodeURIComponent('Welcome to the TRPH app 🐎')+'&body='+encodeURIComponent(b);
+}
 function membersView(){
   if(!RW()) return notFound();
   const ms=S.data.members||[],me=S.session.user.email.toLowerCase();
   return `<h1>Members</h1><p class="muted">Editors can change everything. Readers can see the schedule, horses, people and documents, but cannot change them.</p>
   <div class="list">${ms.map(m=>`<div class="item" style="cursor:default"><div class="grow"><div class="t">${esc(m.display_name||m.email)}</div><div class="s">${esc(m.email)}</div></div>
-   ${m.email===me?'<span class="chip">Editor (you)</span>':`<select data-act="role" data-email="${esc(m.email)}" aria-label="Role for ${esc(m.email)}" style="min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:6px"><option value="reader"${m.role==='reader'?' selected':''}>Reader</option><option value="editor"${m.role==='editor'?' selected':''}>Editor</option></select><button class="btn danger small" data-act="del-member" data-email="${esc(m.email)}">Remove</button>`}</div>`).join('')}</div>
+   ${m.email===me?'<span class="chip">Editor (you)</span>':`<select data-act="role" data-email="${esc(m.email)}" aria-label="Role for ${esc(m.email)}" style="min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:6px"><option value="reader"${m.role==='reader'?' selected':''}>Reader</option><option value="editor"${m.role==='editor'?' selected':''}>Editor</option></select><a class="btn small" href="${inviteHref(m)}">✉️ Invite</a><button class="btn danger small" data-act="del-member" data-email="${esc(m.email)}">Remove</button>`}</div>`).join('')}</div>
   <h2>Add a member</h2><form class="f" data-form="member"><div class="two"><label class="l">Name<input name="display_name"></label><label class="l">Email<input name="email" type="email" required></label></div>
   <label class="l">Role<select name="role"><option value="reader">Reader</option><option value="editor">Editor</option></select></label><div><button class="btn">Add member</button></div></form>
-  <p class="small muted">After you add someone, send them the app address. They sign in with a code sent to that email.</p>`;
+  <p class="small muted">After you add someone, tap ✉️ Invite next to their name: a ready-made email opens with the app link and the guides. In Gmail, choose trphapp@gmail.com in the From field, then send.</p>`;
 }
 function notFound(){return `<div class="empty">This page no longer exists. <a href="#shows">Go to shows</a></div>`}
 
